@@ -23,7 +23,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .ward-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .ward-btn{background:#fff;border:none;border-radius:14px;padding:20px 12px;font-size:15px;font-weight:600;color:#1C1C1E;cursor:pointer;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:transform 0.1s,box-shadow 0.1s;display:flex;flex-direction:column;align-items:center;gap:8px}
 .ward-btn:active{transform:scale(0.96);box-shadow:0 0 0 rgba(0,0,0,0)}
-.ward-btn .ward-icon{font-size:28px;line-height:1}
 .ward-btn .count-chip{font-size:11px;font-weight:500;color:#8E8E93;background:#F2F2F7;border-radius:8px;padding:2px 8px}
 
 /* 編集画面 */
@@ -41,16 +40,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .add-submit:active{background:#0062CC}
 
 /* カメラ */
-#camera-overlay{display:none;position:fixed;inset:0;background:#000;z-index:200;flex-direction:column}
+#camera-overlay{display:none;position:fixed;inset:0;height:100vh;height:100dvh;background:#000;z-index:200;flex-direction:column;overflow:hidden}
 #camera-overlay.active{display:flex}
-#video{flex:1;width:100%;object-fit:cover;background:#111}
-.cam-top{background:rgba(0,0,0,0.7);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.cam-video-wrap{flex:1;min-height:0;position:relative;overflow:hidden;background:#111}
+#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#111;display:block}
+.cam-top{flex-shrink:0;background:rgba(0,0,0,0.7);padding:12px 16px;display:flex;align-items:center;gap:12px}
 .cam-ward-name{color:#fff;font-size:15px;font-weight:600;flex:1;text-align:center}
 .cam-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;line-height:1;padding:4px}
-.cam-bottom{background:rgba(0,0,0,0.7);padding:20px;display:flex;align-items:center;justify-content:center}
+.cam-bottom{flex-shrink:0;background:rgba(0,0,0,0.7);padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;position:relative;z-index:2}
 .shutter{width:72px;height:72px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,0.4);cursor:pointer;transition:transform 0.1s,opacity 0.1s;box-shadow:0 0 0 3px rgba(255,255,255,0.3)}
 .shutter:active{transform:scale(0.91);opacity:0.8}
-.cam-filename{color:rgba(255,255,255,0.7);font-size:12px;position:absolute;bottom:110px;left:0;right:0;text-align:center;letter-spacing:0.3px}
+.shutter:disabled{opacity:0.5}
+.cam-filename{color:rgba(255,255,255,0.7);font-size:12px;text-align:center;letter-spacing:0.3px}
 #canvas{display:none}
 
 /* ギャラリー */
@@ -123,7 +124,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
     <div class="list-card" id="ward-list"></div>
     <div class="section-header">病棟を追加</div>
     <div class="add-row">
-      <input type="text" id="new-ward-input" class="add-input" placeholder="例：循環器内科病棟" maxlength="20">
+      <input type="text" id="new-ward-input" class="add-input" placeholder="例：5N" maxlength="20">
       <button class="add-submit" onclick="addWard()">追加</button>
     </div>
   </div>
@@ -157,11 +158,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
     <span class="cam-ward-name" id="cam-ward-label"></span>
     <div style="width:36px"></div>
   </div>
-  <video id="video" autoplay playsinline muted></video>
+  <div class="cam-video-wrap">
+    <video id="video" autoplay playsinline webkit-playsinline muted></video>
+  </div>
   <canvas id="canvas"></canvas>
-  <div class="cam-filename" id="cam-filename-preview"></div>
   <div class="cam-bottom">
-    <button class="shutter" onclick="takePhoto()" aria-label="シャッターを切る"></button>
+    <div class="cam-filename" id="cam-filename-preview"></div>
+    <button class="shutter" id="shutter-btn" onclick="takePhoto()" aria-label="シャッターを切る"></button>
   </div>
 </div>
 
@@ -181,15 +184,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 <div class="toast" id="toast"></div>
 
 <script>
+// --- 病棟の初期リスト ---
+const WARDS_VERSION = 'v2-2026';
+const DEFAULT_WARDS = ['8N','8S','7N','7S','6N','6S','5N','5S','4N','4S','3N','SCU','ICU','NICU','QQ'];
+
 // --- データ管理 ---
-let wards = JSON.parse(localStorage.getItem('wards') || '["内科病棟","外科病棟","ICU","小児科病棟"]');
+let wards = JSON.parse(localStorage.getItem('wards') || 'null') || DEFAULT_WARDS.slice();
+if (localStorage.getItem('wardsVersion') !== WARDS_VERSION) {
+  wards = DEFAULT_WARDS.slice();
+  localStorage.setItem('wardsVersion', WARDS_VERSION);
+}
 // photos: [{filename, dataUrl, ward, dateStr}]
 let photos = JSON.parse(localStorage.getItem('photos') || '[]');
-// カウンター: 病棟×日付ごとの連番 {"内科病棟_260617": 1, ...}
+// カウンター: 病棟ごとの連番 {"5N": 3, ...}
 let counters = JSON.parse(localStorage.getItem('counters') || '{}');
 
 let currentWard = '';
 let stream = null;
+
+const TARGET_BYTES = 500 * 1024; // 目標: 約500KB
+const MAX_DIMENSION = 1600; // 圧縮前の最大辺(px)
 
 function saveAll() {
   localStorage.setItem('wards', JSON.stringify(wards));
@@ -197,7 +211,17 @@ function saveAll() {
   localStorage.setItem('counters', JSON.stringify(counters));
 }
 
-// --- 日付 yymmdd ---
+// --- ファイルとしてダウンロード保存 ---
+function downloadFile(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// --- 記録用 日付 yymmdd（写真データの参照用途のみ） ---
 function getDateStr() {
   const d = new Date();
   const yy = String(d.getFullYear()).slice(2);
@@ -206,12 +230,20 @@ function getDateStr() {
   return yy + mm + dd;
 }
 
-// --- 次の連番を取得 ---
-function nextSeq(ward, dateStr) {
-  const key = ward + '_' + dateStr;
-  const n = (counters[key] || 0) + 1;
-  counters[key] = n;
-  return String(n).padStart(2, '0');
+// --- ファイル名を生成（1枚目は病棟名のみ、2枚目以降は 病棟-02, 病棟-03... ） ---
+function buildFilename(ward, n) {
+  return n <= 1 ? ward : ward + '-' + String(n).padStart(2, '0');
+}
+
+function nextFilename(ward) {
+  const n = (counters[ward] || 0) + 1;
+  counters[ward] = n;
+  return buildFilename(ward, n);
+}
+
+function peekNextFilename(ward) {
+  const n = (counters[ward] || 0) + 1;
+  return buildFilename(ward, n);
 }
 
 // --- 画面切替 ---
@@ -229,19 +261,6 @@ function updateBadge() {
 }
 
 // --- 病棟ホーム ---
-const WARD_ICONS = {
-  '内科': '🏥', '外科': '🔪', 'ICU': '🫀', '小児': '👶', '産婦': '🤱',
-  '整形': '🦴', '脳': '🧠', '循環': '❤️', '眼科': '👁️', '皮膚': '🩹',
-  '耳鼻': '👂', '泌尿': '🫘', '精神': '🧘', '呼吸': '🫁', '腎': '🫘',
-};
-
-function getIcon(ward) {
-  for (const [key, icon] of Object.entries(WARD_ICONS)) {
-    if (ward.includes(key)) return icon;
-  }
-  return '🏨';
-}
-
 function getWardPhotoCount(ward) {
   return photos.filter(p => p.ward === ward).length;
 }
@@ -257,7 +276,7 @@ function renderWards() {
     const cnt = getWardPhotoCount(w);
     const btn = document.createElement('button');
     btn.className = 'ward-btn';
-    btn.innerHTML = `<span class="ward-icon">${getIcon(w)}</span>${w}<span class="count-chip">${cnt > 0 ? cnt + '枚' : '未撮影'}</span>`;
+    btn.innerHTML = `${w}<span class="count-chip">${cnt > 0 ? cnt + '枚' : '未撮影'}</span>`;
     btn.onclick = () => openCamera(w);
     grid.appendChild(btn);
   });
@@ -274,7 +293,7 @@ function renderWardList() {
   wards.forEach((w, i) => {
     const item = document.createElement('div');
     item.className = 'list-item';
-    item.innerHTML = `<span>${getIcon(w)} ${w}</span><button class="del-btn" aria-label="${w}を削除" onclick="deleteWard(${i})">－</button>`;
+    item.innerHTML = `<span>${w}</span><button class="del-btn" aria-label="${w}を削除" onclick="deleteWard(${i})">－</button>`;
     list.appendChild(item);
   });
 }
@@ -304,51 +323,99 @@ async function openCamera(ward) {
   currentWard = ward;
   document.getElementById('cam-ward-label').textContent = ward;
   updateFilenamePreview();
-  document.getElementById('camera-overlay').style.display = 'flex';
+  document.getElementById('camera-overlay').classList.add('active');
+
+  const video = document.getElementById('video');
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
-    document.getElementById('video').srcObject = stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+    } catch (e1) {
+      // 条件付きで取得できない端末向けに、制約を緩めて再試行
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+    video.srcObject = stream;
+    try { await video.play(); } catch (e2) { /* autoplay属性で再生されるため失敗しても無視 */ }
   } catch (e) {
-    alert('カメラへのアクセスが許可されていません。\nSafariの設定 → このWebサイト → カメラ → 許可 に変更してください。');
+    let msg = 'カメラを起動できませんでした。';
+    if (e && (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')) {
+      msg = 'カメラへのアクセスが許可されていません。\n設定 → Chrome(またはSafari) → カメラ を確認し、許可に変更してください。';
+    } else if (e && e.name === 'NotFoundError') {
+      msg = 'カメラが見つかりませんでした。端末にカメラが搭載されているか確認してください。';
+    } else if (e && e.name === 'NotReadableError') {
+      msg = 'カメラが他のアプリで使用中の可能性があります。他のアプリを閉じてから再度お試しください。';
+    }
+    alert(msg);
     closeCamera();
   }
 }
 
 function updateFilenamePreview() {
-  const dateStr = getDateStr();
-  const key = currentWard + '_' + dateStr;
-  const nextN = String((counters[key] || 0) + 1).padStart(2, '0');
-  document.getElementById('cam-filename-preview').textContent = currentWard + '_' + dateStr + '_' + nextN + '.jpg';
+  document.getElementById('cam-filename-preview').textContent = peekNextFilename(currentWard) + '.jpg';
 }
 
 function closeCamera() {
-  document.getElementById('camera-overlay').style.display = 'none';
+  document.getElementById('camera-overlay').classList.remove('active');
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+// --- 撮影画像を約500KBに圧縮 ---
+function drawToCanvas(video, maxDim) {
+  const vw = video.videoWidth || 1280;
+  const vh = video.videoHeight || 960;
+  let w = vw, h = vh;
+  if (Math.max(w, h) > maxDim) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.getElementById('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  return canvas;
+}
+
+function dataUrlBytes(dataUrl) {
+  const base64 = dataUrl.split(',')[1] || '';
+  return Math.round(base64.length * 0.75);
+}
+
+function compressPhoto(video) {
+  let maxDim = MAX_DIMENSION;
+  const qualities = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.28, 0.2];
+  let best = null;
+  for (let pass = 0; pass < 3; pass++) {
+    const canvas = drawToCanvas(video, maxDim);
+    for (const q of qualities) {
+      const dataUrl = canvas.toDataURL('image/jpeg', q);
+      const bytes = dataUrlBytes(dataUrl);
+      if (!best || bytes < dataUrlBytes(best)) best = dataUrl;
+      if (bytes <= TARGET_BYTES) return dataUrl;
+    }
+    maxDim = Math.round(maxDim * 0.75); // まだ大きい場合は解像度を下げて再挑戦
+  }
+  return best;
 }
 
 function takePhoto() {
   const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  canvas.width = video.videoWidth || 1280;
-  canvas.height = video.videoHeight || 960;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  const shutterBtn = document.getElementById('shutter-btn');
+  if (shutterBtn.disabled) return; // 連打防止
+  shutterBtn.disabled = true;
 
+  const dataUrl = compressPhoto(video);
   const dateStr = getDateStr();
-  const seq = nextSeq(currentWard, dateStr);
-  const filename = currentWard + '_' + dateStr + '_' + seq + '.jpg';
+  const filenameBase = nextFilename(currentWard);
+  const filename = filenameBase + '.jpg';
 
   photos.push({ filename, dataUrl, ward: currentWard, dateStr });
   saveAll();
   updateBadge();
 
-  // ダウンロード
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  a.click();
-
+  downloadFile(dataUrl, filename);
   showToast('保存: ' + filename);
+
+  shutterBtn.disabled = false;
   closeCamera();
 
   // ホーム画面に戻って枚数を更新
@@ -385,10 +452,7 @@ function renderGallery() {
 
 function downloadPhoto(i) {
   const p = photos[i];
-  const a = document.createElement('a');
-  a.href = p.dataUrl;
-  a.download = p.filename;
-  a.click();
+  downloadFile(p.dataUrl, p.filename);
   showToast('ダウンロードしました');
 }
 
@@ -423,6 +487,7 @@ function showToast(msg) {
 }
 
 // --- 初期化 ---
+saveAll();
 renderWards();
 updateBadge();
 </script>
