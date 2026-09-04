@@ -211,7 +211,7 @@ function saveAll() {
   localStorage.setItem('counters', JSON.stringify(counters));
 }
 
-// --- ファイルとしてダウンロード保存 ---
+// --- ファイルとしてダウンロード保存（共有シートが使えない場合のフォールバック） ---
 function downloadFile(dataUrl, filename) {
   const a = document.createElement('a');
   a.href = dataUrl;
@@ -219,6 +219,39 @@ function downloadFile(dataUrl, filename) {
   document.body.appendChild(a);
   a.click();
   a.remove();
+}
+
+// --- dataURL を同期的にBlobへ変換（fetchを使うとユーザー操作の有効期限が切れて共有シートが開けないため） ---
+function dataUrlToBlob(dataUrl) {
+  const [meta, base64] = dataUrl.split(',');
+  const mimeMatch = meta.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+// --- 共有シート経由で保存（iPadは「イメージを保存」をタップするだけで写真に保存できる） ---
+function shareOrDownload(dataUrl, filename) {
+  try {
+    const blob = dataUrlToBlob(dataUrl);
+    const file = new File([blob], filename, { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file] })
+        .then(() => showToast('保存: ' + filename))
+        .catch(e => {
+          if (e && e.name === 'AbortError') return; // ユーザーが共有シートをキャンセル
+          downloadFile(dataUrl, filename);
+          showToast('保存: ' + filename);
+        });
+      return;
+    }
+  } catch (e) {
+    // 共有API非対応の場合は下のフォールバックへ
+  }
+  downloadFile(dataUrl, filename);
+  showToast('保存: ' + filename);
 }
 
 // --- 記録用 日付 yymmdd（写真データの参照用途のみ） ---
@@ -412,8 +445,7 @@ function takePhoto() {
   saveAll();
   updateBadge();
 
-  downloadFile(dataUrl, filename);
-  showToast('保存: ' + filename);
+  shareOrDownload(dataUrl, filename);
 
   shutterBtn.disabled = false;
   closeCamera();
@@ -452,8 +484,7 @@ function renderGallery() {
 
 function downloadPhoto(i) {
   const p = photos[i];
-  downloadFile(p.dataUrl, p.filename);
-  showToast('ダウンロードしました');
+  shareOrDownload(p.dataUrl, p.filename);
 }
 
 // --- 削除 ---
