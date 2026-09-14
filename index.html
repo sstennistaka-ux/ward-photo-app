@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>病棟フォトアプリ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007AFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="病棟フォト">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;background:#F2F2F7;color:#1C1C1E;min-height:100vh}
@@ -28,7 +36,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 /* 編集画面 */
 .section-header{font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;padding:16px 0 8px}
 .list-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
-.list-item{display:flex;align-items:center;padding:14px 16px;border-bottom:0.5px solid #F2F2F7}
+.list-item{display:flex;align-items:center;padding:14px 16px;border-bottom:0.5px solid #F2F2F7;gap:10px}
 .list-item:last-child{border-bottom:none}
 .list-item span{flex:1;font-size:15px;color:#1C1C1E}
 .del-btn{background:none;border:none;cursor:pointer;font-size:22px;color:#FF3B30;padding:2px 4px;line-height:1}
@@ -36,8 +44,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .add-input{flex:1;font-size:15px;padding:12px 14px;border:0.5px solid #C6C6C8;border-radius:12px;background:#fff;color:#1C1C1E;outline:none}
 .add-input:focus{border-color:#007AFF}
 .add-input::placeholder{color:#C7C7CC}
-.add-submit{background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer}
+.add-submit{background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0}
 .add-submit:active{background:#0062CC}
+.add-submit:disabled{opacity:0.5}
+.export-btn{padding:9px 14px;font-size:13px}
 
 /* カメラ */
 #camera-overlay{display:none;position:fixed;inset:0;height:100vh;height:100dvh;background:#000;z-index:200;flex-direction:column;overflow:hidden}
@@ -57,7 +67,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 /* ギャラリー */
 .gallery-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .photo-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
-.photo-card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.photo-card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#eee}
 .photo-meta{padding:8px 10px;display:flex;align-items:flex-start;gap:4px}
 .photo-name{flex:1;font-size:10px;color:#8E8E93;line-height:1.4;word-break:break-all}
 .dl-btn{background:none;border:none;cursor:pointer;color:#007AFF;font-size:18px;padding:2px;flex-shrink:0;line-height:1}
@@ -70,22 +80,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .back-btn span{font-size:17px}
 
 /* トースト */
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,0.78);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,0.78);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:999;white-space:nowrap;pointer-events:none;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ヒント */
 .hint{font-size:12px;color:#8E8E93;text-align:center;margin-top:16px;line-height:1.6}
 
-/* 削除確認 */
+/* 削除確認・書き出し完了 */
 .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;align-items:flex-end;justify-content:center}
 .modal-backdrop.active{display:flex}
 .modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px}
 .modal-sheet h3{font-size:17px;font-weight:600;margin-bottom:8px;text-align:center}
-.modal-sheet p{font-size:14px;color:#8E8E93;margin-bottom:20px;text-align:center}
+.modal-sheet p{font-size:14px;color:#8E8E93;margin-bottom:20px;text-align:center;line-height:1.6}
 .modal-btns{display:flex;flex-direction:column;gap:10px}
 .modal-btns button{padding:14px;border-radius:12px;font-size:16px;font-weight:600;border:none;cursor:pointer}
 .btn-danger{background:#FF3B30;color:#fff}
 .btn-danger:active{background:#D93025}
+.btn-primary{background:#007AFF;color:#fff}
+.btn-primary:active{background:#0062CC}
 .btn-cancel{background:#F2F2F7;color:#1C1C1E}
 </style>
 </head>
@@ -105,7 +117,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
   </div>
   <div class="content">
     <div class="ward-grid" id="ward-grid"></div>
-    <p class="hint">病棟ボタンをタップ → カメラ起動<br>撮影後に自動でファイル名が付きます</p>
+    <p class="hint">病棟ボタンをタップ → カメラ起動<br>撮影後に自動でファイル名が付きます<br>(本日撮影分の枚数を表示しています)</p>
   </div>
 </div>
 
@@ -143,6 +155,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
     </button>
   </div>
   <div class="content">
+    <div id="export-section"></div>
+    <div class="section-header" id="gallery-section-header" style="display:none">プレビュー</div>
     <div class="gallery-grid" id="gallery-grid"></div>
     <div class="empty" id="empty-state">
       <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -172,7 +186,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 <div class="modal-backdrop" id="clear-modal">
   <div class="modal-sheet">
     <h3>全て削除しますか？</h3>
-    <p>アプリ内の写真データが全て消去されます。ダウンロード済みの写真は残ります。</p>
+    <p>アプリ内の写真データ(未書き出し分も含む)が全て消去されます。</p>
     <div class="modal-btns">
       <button class="btn-danger" onclick="clearAll()">全て削除</button>
       <button class="btn-cancel" onclick="closeClearModal()">キャンセル</button>
@@ -180,24 +194,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
   </div>
 </div>
 
+<!-- 書き出し完了モーダル -->
+<div class="modal-backdrop" id="export-done-modal">
+  <div class="modal-sheet">
+    <h3>書き出し完了</h3>
+    <p id="export-done-desc"></p>
+    <div class="modal-btns">
+      <button class="btn-danger" id="export-done-delete-btn">この端末から削除する</button>
+      <button class="btn-cancel" onclick="closeExportDoneModal()">残しておく</button>
+    </div>
+  </div>
+</div>
+
 <!-- トースト -->
 <div class="toast" id="toast"></div>
 
+<script src="jszip.min.js"></script>
 <script>
 // --- 病棟の初期リスト ---
 const WARDS_VERSION = 'v2-2026';
 const DEFAULT_WARDS = ['8N','8S','7N','7S','6N','6S','5N','5S','4N','4S','3N','SCU','ICU','NICU','QQ'];
 
-// --- データ管理 ---
+// --- 病棟リスト・連番カウンターはローカルストレージ(軽量データのみ) ---
 let wards = JSON.parse(localStorage.getItem('wards') || 'null') || DEFAULT_WARDS.slice();
 if (localStorage.getItem('wardsVersion') !== WARDS_VERSION) {
   wards = DEFAULT_WARDS.slice();
   localStorage.setItem('wardsVersion', WARDS_VERSION);
 }
-// photos: [{filename, dataUrl, ward, dateStr}]
-let photos = JSON.parse(localStorage.getItem('photos') || '[]');
-// カウンター: 病棟ごとの連番 {"5N": 3, ...}
+// counters: 日付(yymmdd)+病棟ごとの連番 {"260914|5N": 3, ...} → 日をまたぐとリセットされ、
+// マクロが期待する「その日のフォルダでは1枚目=メイン(病棟名のみ)」に一致する
 let counters = JSON.parse(localStorage.getItem('counters') || '{}');
+
+// photos: [{id, filename, blob, ward, dateStr}] 本体はIndexedDBに保存(容量上限が大きく、9枚目以降も撮影できる)
+let photos = [];
 
 let currentWard = '';
 let stream = null;
@@ -205,56 +234,109 @@ let stream = null;
 const TARGET_BYTES = 500 * 1024; // 目標: 約500KB
 const MAX_DIMENSION = 1600; // 圧縮前の最大辺(px)
 
-function saveAll() {
+function saveWardsAndCounters() {
   localStorage.setItem('wards', JSON.stringify(wards));
-  localStorage.setItem('photos', JSON.stringify(photos));
   localStorage.setItem('counters', JSON.stringify(counters));
 }
 
+// ============================================================
+// IndexedDB(写真本体の保存先。localStorageは容量が小さく、8枚前後で
+// 保存エラーが発生し9枚目以降シャッターが反応しなくなる不具合があったため移行)
+// ============================================================
+const DB_NAME = 'wardPhotoDB';
+const DB_VERSION = 1;
+const STORE = 'photos';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('dateStr', 'dateStr');
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+const dbPromise = openDB();
+
+async function dbAdd(record) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).add(record);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbGetAll() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDelete(id) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbClear() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // --- ファイルとしてダウンロード保存（共有シートが使えない場合のフォールバック） ---
-function downloadFile(dataUrl, filename) {
+function downloadFile(href, filename) {
   const a = document.createElement('a');
-  a.href = dataUrl;
+  a.href = href;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
 }
 
-// --- dataURL を同期的にBlobへ変換（fetchを使うとユーザー操作の有効期限が切れて共有シートが開けないため） ---
-function dataUrlToBlob(dataUrl) {
-  const [meta, base64] = dataUrl.split(',');
-  const mimeMatch = meta.match(/:(.*?);/);
-  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
-}
-
-// --- 共有シート経由で保存（iPadは「イメージを保存」をタップするだけで写真に保存できる） ---
-function shareOrDownload(dataUrl, filename) {
+// --- 共有シート経由で保存。true=送信/保存操作が行われた、false=ユーザーがキャンセルした ---
+async function shareOrDownload(blob, filename, mime) {
   try {
-    const blob = dataUrlToBlob(dataUrl);
-    const file = new File([blob], filename, { type: 'image/jpeg' });
+    const file = new File([blob], filename, { type: mime || blob.type || 'application/octet-stream' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file] })
-        .then(() => showToast('保存: ' + filename))
-        .catch(e => {
-          if (e && e.name === 'AbortError') return; // ユーザーが共有シートをキャンセル
-          downloadFile(dataUrl, filename);
-          showToast('保存: ' + filename);
-        });
-      return;
+      try {
+        await navigator.share({ files: [file] });
+        showToast('共有しました: ' + filename);
+        return true;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return false; // ユーザーが共有シートをキャンセル
+      }
     }
   } catch (e) {
     // 共有API非対応の場合は下のフォールバックへ
   }
-  downloadFile(dataUrl, filename);
-  showToast('保存: ' + filename);
+  const url = URL.createObjectURL(blob);
+  downloadFile(url, filename);
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  showToast('保存しました: ' + filename);
+  return true;
 }
 
-// --- 記録用 日付 yymmdd（写真データの参照用途のみ） ---
+// --- 記録用 日付 yymmdd ---
 function getDateStr() {
   const d = new Date();
   const yy = String(d.getFullYear()).slice(2);
@@ -263,19 +345,29 @@ function getDateStr() {
   return yy + mm + dd;
 }
 
+function dateStrToMMDD(dateStr) {
+  return dateStr.slice(2); // yymmdd → mmdd
+}
+
 // --- ファイル名を生成（1枚目は病棟名のみ、2枚目以降は 病棟-02, 病棟-03... ） ---
 function buildFilename(ward, n) {
   return n <= 1 ? ward : ward + '-' + String(n).padStart(2, '0');
 }
 
-function nextFilename(ward) {
-  const n = (counters[ward] || 0) + 1;
-  counters[ward] = n;
+function counterKey(dateStr, ward) {
+  return dateStr + '|' + ward;
+}
+
+function nextFilename(ward, dateStr) {
+  const key = counterKey(dateStr, ward);
+  const n = (counters[key] || 0) + 1;
+  counters[key] = n;
   return buildFilename(ward, n);
 }
 
-function peekNextFilename(ward) {
-  const n = (counters[ward] || 0) + 1;
+function peekNextFilename(ward, dateStr) {
+  const key = counterKey(dateStr, ward);
+  const n = (counters[key] || 0) + 1;
   return buildFilename(ward, n);
 }
 
@@ -293,9 +385,10 @@ function updateBadge() {
   document.getElementById('count-badge').textContent = photos.length;
 }
 
-// --- 病棟ホーム ---
-function getWardPhotoCount(ward) {
-  return photos.filter(p => p.ward === ward).length;
+// --- 病棟ホーム（本日撮影分の枚数を表示） ---
+function getWardPhotoCountToday(ward) {
+  const today = getDateStr();
+  return photos.filter(p => p.ward === ward && p.dateStr === today).length;
 }
 
 function renderWards() {
@@ -306,7 +399,7 @@ function renderWards() {
     return;
   }
   wards.forEach(w => {
-    const cnt = getWardPhotoCount(w);
+    const cnt = getWardPhotoCountToday(w);
     const btn = document.createElement('button');
     btn.className = 'ward-btn';
     btn.innerHTML = `${w}<span class="count-chip">${cnt > 0 ? cnt + '枚' : '未撮影'}</span>`;
@@ -337,7 +430,7 @@ function addWard() {
   if (!val) { showToast('病棟名を入力してください'); return; }
   if (wards.includes(val)) { showToast('同じ名前の病棟が既にあります'); return; }
   wards.push(val);
-  saveAll();
+  saveWardsAndCounters();
   input.value = '';
   renderWardList();
   showToast(val + ' を追加しました');
@@ -346,7 +439,7 @@ function addWard() {
 function deleteWard(i) {
   const name = wards[i];
   wards.splice(i, 1);
-  saveAll();
+  saveWardsAndCounters();
   renderWardList();
   showToast(name + ' を削除しました');
 }
@@ -383,7 +476,7 @@ async function openCamera(ward) {
 }
 
 function updateFilenamePreview() {
-  document.getElementById('cam-filename-preview').textContent = peekNextFilename(currentWard) + '.jpg';
+  document.getElementById('cam-filename-preview').textContent = peekNextFilename(currentWard, getDateStr()) + '.jpg';
 }
 
 function closeCamera() {
@@ -391,87 +484,138 @@ function closeCamera() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
 
-// --- 撮影画像を約500KBに圧縮 ---
+// --- 撮影範囲をプレビュー(画面表示)と一致させてCanvasへ描画 ---
+// 以前はプレビューは object-fit:cover で画面いっぱいに切り抜いて表示する一方、
+// 保存する画像はカメラの生解像度をそのまま使っていたため、
+// 「画面で見た構図」と「実際に保存される画像」の縦横比がずれる不具合があった。
 function drawToCanvas(video, maxDim) {
   const vw = video.videoWidth || 1280;
   const vh = video.videoHeight || 960;
-  let w = vw, h = vh;
-  if (Math.max(w, h) > maxDim) {
-    const scale = maxDim / Math.max(w, h);
-    w = Math.round(w * scale);
-    h = Math.round(h * scale);
+
+  const wrap = document.querySelector('.cam-video-wrap');
+  const dispW = wrap.clientWidth || vw;
+  const dispH = wrap.clientHeight || vh;
+  const dispAspect = dispW / dispH;
+  const nativeAspect = vw / vh;
+
+  let sx, sy, sw, sh;
+  if (nativeAspect > dispAspect) {
+    // 映像の方が横長 → 左右を切り取る(プレビューと同じ範囲にする)
+    sh = vh;
+    sw = vh * dispAspect;
+    sx = (vw - sw) / 2;
+    sy = 0;
+  } else {
+    // 映像の方が縦長 → 上下を切り取る
+    sw = vw;
+    sh = vw / dispAspect;
+    sx = 0;
+    sy = (vh - sh) / 2;
   }
+
+  let outW = sw, outH = sh;
+  if (Math.max(outW, outH) > maxDim) {
+    const scale = maxDim / Math.max(outW, outH);
+    outW = outW * scale;
+    outH = outH * scale;
+  }
+
   const canvas = document.getElementById('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  canvas.width = Math.round(outW);
+  canvas.height = Math.round(outH);
+  canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 
-function dataUrlBytes(dataUrl) {
-  const base64 = dataUrl.split(',')[1] || '';
-  return Math.round(base64.length * 0.75);
+function canvasToBlob(canvas, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
 }
 
-function compressPhoto(video) {
+// --- 撮影画像を約500KBに圧縮 ---
+async function compressPhoto(video) {
   let maxDim = MAX_DIMENSION;
   const qualities = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.28, 0.2];
   let best = null;
   for (let pass = 0; pass < 3; pass++) {
     const canvas = drawToCanvas(video, maxDim);
     for (const q of qualities) {
-      const dataUrl = canvas.toDataURL('image/jpeg', q);
-      const bytes = dataUrlBytes(dataUrl);
-      if (!best || bytes < dataUrlBytes(best)) best = dataUrl;
-      if (bytes <= TARGET_BYTES) return dataUrl;
+      const blob = await canvasToBlob(canvas, q);
+      if (blob && (!best || blob.size < best.size)) best = blob;
+      if (blob && blob.size <= TARGET_BYTES) return blob;
     }
     maxDim = Math.round(maxDim * 0.75); // まだ大きい場合は解像度を下げて再挑戦
   }
   return best;
 }
 
-function takePhoto() {
+async function takePhoto() {
   const video = document.getElementById('video');
   const shutterBtn = document.getElementById('shutter-btn');
   if (shutterBtn.disabled) return; // 連打防止
   shutterBtn.disabled = true;
 
-  const dataUrl = compressPhoto(video);
   const dateStr = getDateStr();
-  const filenameBase = nextFilename(currentWard);
+  const filenameBase = nextFilename(currentWard, dateStr);
   const filename = filenameBase + '.jpg';
 
-  photos.push({ filename, dataUrl, ward: currentWard, dateStr });
-  saveAll();
-  updateBadge();
+  try {
+    const blob = await compressPhoto(video);
+    if (!blob) throw new Error('圧縮に失敗しました');
 
-  shareOrDownload(dataUrl, filename);
+    const record = { filename, blob, ward: currentWard, dateStr };
+    const id = await dbAdd(record);
+    record.id = id;
+    photos.push(record);
+    saveWardsAndCounters();
+    updateBadge();
 
-  shutterBtn.disabled = false;
-  closeCamera();
-
-  // ホーム画面に戻って枚数を更新
-  show('s-home');
+    closeCamera();
+    show('s-home');
+    showToast('撮影しました: ' + filename);
+  } catch (e) {
+    console.error(e);
+    // 保存に失敗した場合は連番を1つ戻し、再撮影時に同じファイル名を使えるようにする
+    const key = counterKey(dateStr, currentWard);
+    counters[key] = Math.max(0, (counters[key] || 1) - 1);
+    saveWardsAndCounters();
+    showToast('保存に失敗しました。もう一度お試しください');
+  } finally {
+    shutterBtn.disabled = false;
+  }
 }
 
 // --- ギャラリー ---
+let galleryObjectUrls = [];
+function revokeGalleryUrls() {
+  galleryObjectUrls.forEach(u => URL.revokeObjectURL(u));
+  galleryObjectUrls = [];
+}
+
 function renderGallery() {
+  renderExportSection();
+
   const grid = document.getElementById('gallery-grid');
   const empty = document.getElementById('empty-state');
+  const sectionHeader = document.getElementById('gallery-section-header');
+  revokeGalleryUrls();
   grid.innerHTML = '';
   if (photos.length === 0) {
     empty.style.display = 'flex';
     grid.style.display = 'none';
+    sectionHeader.style.display = 'none';
     return;
   }
   empty.style.display = 'none';
   grid.style.display = 'grid';
+  sectionHeader.style.display = 'block';
   [...photos].reverse().forEach((p, ri) => {
     const i = photos.length - 1 - ri;
+    const url = URL.createObjectURL(p.blob);
+    galleryObjectUrls.push(url);
     const card = document.createElement('div');
     card.className = 'photo-card';
     card.innerHTML = `
-      <img src="${p.dataUrl}" alt="${p.filename}" loading="lazy">
+      <img src="${url}" alt="${p.filename}" loading="lazy">
       <div class="photo-meta">
         <span class="photo-name">${p.filename}</span>
         <button class="dl-btn" onclick="downloadPhoto(${i})" aria-label="再ダウンロード">
@@ -484,10 +628,66 @@ function renderGallery() {
 
 function downloadPhoto(i) {
   const p = photos[i];
-  shareOrDownload(p.dataUrl, p.filename);
+  shareOrDownload(p.blob, p.filename, 'image/jpeg');
 }
 
-// --- 削除 ---
+// --- 書き出し(日付ごとにZIPへまとめてAirDrop/保存) ---
+function renderExportSection() {
+  const container = document.getElementById('export-section');
+  const dates = [...new Set(photos.map(p => p.dateStr))].sort().reverse();
+  if (dates.length === 0) { container.innerHTML = ''; return; }
+
+  let html = '<div class="section-header">書き出し(AirDrop用)</div><div class="list-card">';
+  dates.forEach(ds => {
+    const mmdd = dateStrToMMDD(ds);
+    const cnt = photos.filter(p => p.dateStr === ds).length;
+    html += `<div class="list-item">
+      <span>環境ラウンド${mmdd}(${cnt}枚)</span>
+      <button class="add-submit export-btn" onclick="exportDay('${ds}')">まとめて書き出す</button>
+    </div>`;
+  });
+  html += '</div><p class="hint" style="margin-top:8px;text-align:left">「書き出す」を押すとZIPが1つ作成されます。AirDrop送信後、Mac側でダブルクリックすると「環境ラウンドMMDD」フォルダとして展開されます。</p>';
+  container.innerHTML = html;
+}
+
+async function exportDay(dateStr) {
+  const dayPhotos = photos.filter(p => p.dateStr === dateStr);
+  if (dayPhotos.length === 0) { showToast('対象の写真がありません'); return; }
+  if (typeof JSZip === 'undefined') { showToast('書き出し機能の読み込みに失敗しました。オンライン状態で再度お試しください'); return; }
+
+  const mmdd = dateStrToMMDD(dateStr);
+  const zipFilename = '環境ラウンド' + mmdd + '.zip';
+  showToast('書き出し中…');
+
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder('環境ラウンド' + mmdd);
+    dayPhotos.forEach(p => folder.file(p.filename, p.blob));
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+    const actioned = await shareOrDownload(zipBlob, zipFilename, 'application/zip');
+    if (actioned) {
+      openExportDoneModal(zipFilename, dateStr);
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('書き出しに失敗しました');
+  }
+}
+
+async function deleteDay(dateStr) {
+  const targets = photos.filter(p => p.dateStr === dateStr);
+  for (const p of targets) {
+    await dbDelete(p.id);
+  }
+  photos = photos.filter(p => p.dateStr !== dateStr);
+  updateBadge();
+  renderGallery();
+  renderWards();
+  showToast('この日の写真を削除しました');
+}
+
+// --- 削除確認モーダル(全削除) ---
 function confirmClearAll() {
   if (photos.length === 0) { showToast('写真がありません'); return; }
   document.getElementById('clear-modal').classList.add('active');
@@ -497,15 +697,37 @@ function closeClearModal() {
   document.getElementById('clear-modal').classList.remove('active');
 }
 
-function clearAll() {
+async function clearAll() {
+  await dbClear();
   photos = [];
   counters = {};
-  saveAll();
+  saveWardsAndCounters();
   closeClearModal();
   renderGallery();
   updateBadge();
+  renderWards();
   showToast('全て削除しました');
 }
+
+// --- 書き出し完了モーダル ---
+let exportDoneDateStr = null;
+function openExportDoneModal(zipFilename, dateStr) {
+  document.getElementById('export-done-desc').textContent =
+    zipFilename + ' を書き出しました。AirDropや保存が完了していれば、この端末の写真データを削除できます。';
+  exportDoneDateStr = dateStr;
+  document.getElementById('export-done-modal').classList.add('active');
+}
+
+function closeExportDoneModal() {
+  document.getElementById('export-done-modal').classList.remove('active');
+  exportDoneDateStr = null;
+}
+
+document.getElementById('export-done-delete-btn').addEventListener('click', () => {
+  const ds = exportDoneDateStr;
+  closeExportDoneModal();
+  if (ds) deleteDay(ds);
+});
 
 // --- トースト ---
 let toastTimer = null;
@@ -518,9 +740,24 @@ function showToast(msg) {
 }
 
 // --- 初期化 ---
-saveAll();
-renderWards();
-updateBadge();
+async function init() {
+  try {
+    photos = await dbGetAll();
+  } catch (e) {
+    console.error(e);
+    photos = [];
+  }
+  saveWardsAndCounters();
+  renderWards();
+  updateBadge();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+}
+init();
 </script>
 </body>
 </html>
