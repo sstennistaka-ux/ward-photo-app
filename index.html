@@ -99,6 +99,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .btn-primary{background:#007AFF;color:#fff}
 .btn-primary:active{background:#0062CC}
 .btn-cancel{background:#F2F2F7;color:#1C1C1E}
+
+/* テーマ選択 */
+.theme-row{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.theme-row label{font-size:13px;color:#8E8E93;flex-shrink:0}
+.theme-select{flex:1;font-size:15px;font-weight:600;color:#1C1C1E;border:none;background:transparent;outline:none}
+
+/* 病棟ボタンの状態チップ */
+.count-chip.done{background:#E6F4EA;color:#2E7D32}
+.count-chip.partial{background:#FFF4E5;color:#B26A00}
+
+/* チェック項目リスト */
+.check-item{padding:14px 16px;border-bottom:0.5px solid #F2F2F7}
+.check-item:last-child{border-bottom:none}
+.check-item-text{font-size:14px;color:#1C1C1E;line-height:1.5;margin-bottom:10px}
+.mark-btns{display:flex;gap:8px}
+.mark-btn{flex:1;padding:10px 0;border-radius:10px;border:1.5px solid #E5E5EA;background:#fff;font-size:16px;font-weight:700;cursor:pointer;color:#8E8E93}
+.mark-btn.sel-maru{background:#2E7D32;border-color:#2E7D32;color:#fff}
+.mark-btn.sel-batsu{background:#C62828;border-color:#C62828;color:#fff}
+.mark-btn.sel-bar{background:#9E9E9E;border-color:#9E9E9E;color:#fff}
+
+/* ミニ写真ストリップ */
+.mini-thumb-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mini-thumb{width:64px;height:64px;border-radius:10px;overflow:hidden;background:#eee}
+.mini-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.take-photo-btn{width:100%;margin-top:14px;background:#007AFF;color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:600;cursor:pointer}
+.take-photo-btn:active{background:#0062CC}
+
+/* レビュー画面 */
+.review-item{display:flex;align-items:center;padding:14px 16px;border-bottom:0.5px solid #F2F2F7;gap:10px;cursor:pointer;background:none;border-left:none;border-right:none;border-top:none;width:100%;text-align:left}
+.review-item:last-child{border-bottom:none}
+.review-ward{font-size:15px;font-weight:600;color:#1C1C1E;flex:1}
+.review-summary{font-size:13px;color:#8E8E93}
+.review-summary.has-batsu{color:#C62828;font-weight:600}
+.review-chevron{color:#C7C7CC}
 </style>
 </head>
 <body>
@@ -116,8 +150,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
     </button>
   </div>
   <div class="content">
+    <div class="theme-row">
+      <label for="theme-select">テーマ</label>
+      <select class="theme-select" id="theme-select" onchange="onThemeChange(this.value)"></select>
+    </div>
     <div class="ward-grid" id="ward-grid"></div>
-    <p class="hint">病棟ボタンをタップ → カメラ起動<br>撮影後に自動でファイル名が付きます<br>(本日撮影分の枚数を表示しています)</p>
+    <p class="hint">病棟ボタンをタップ → チェック項目の入力 → 撮影<br>(本日・選択中テーマの入力状況を表示しています)</p>
   </div>
 </div>
 
@@ -165,6 +203,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
   </div>
 </div>
 
+<!-- チェック項目入力画面 -->
+<div id="s-checklist" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="closeChecklistScreen()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>病棟選択に戻る</span>
+    </button>
+  </div>
+  <div class="content">
+    <div class="section-header" id="checklist-title"></div>
+    <div class="list-card" id="checklist-items"></div>
+    <div id="checklist-photo-section"></div>
+  </div>
+</div>
+
+<!-- 確認・修正(病棟一覧)画面 -->
+<div id="s-review" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="show('s-gallery')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>戻る</span>
+    </button>
+    <h1>確認・修正</h1>
+    <div style="width:64px"></div>
+  </div>
+  <div class="content" id="review-content"></div>
+</div>
+
 <!-- カメラオーバーレイ -->
 <div id="camera-overlay">
   <div class="cam-top">
@@ -210,10 +276,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 <div class="toast" id="toast"></div>
 
 <script src="jszip.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="pptxgen.bundle.js"></script>
 <script>
 // --- 病棟の初期リスト ---
 const WARDS_VERSION = 'v2-2026';
 const DEFAULT_WARDS = ['8N','8S','7N','7S','6N','6S','5N','5S','4N','4S','3N','SCU','ICU','NICU','QQ'];
+
+// --- 環境ラウンドのテーマとチェック項目(環境ラウンド.xlsmより) ---
+const THEMES = [
+  { name: '洗浄室', items: ['洗浄後の物品が乾燥させてある', '清潔（洗浄後物品）と不潔が混在していない', '汚物処理槽に汚物が停滞していない', '個人防護具が使用出来るところに置かれている', '使用済み尿器などが床に直置きされていない', '濡れたタオルが敷きっぱなしになっていない'] },
+  { name: '薬品保冷庫', items: ['期限切れの薬品がない', '複数回使用のバイアルには開封日を記入している', '吸入薬品に開封日が記載されている', '薬品保冷庫内に薬品と飲食物を分けて保管している'] },
+  { name: 'ナースステーション内手洗いシンク', items: ['手洗い手順のポスターが貼られている', '予備のペーパータオルがおかれていない', '手洗い場のシンク周囲が汚れていない', '手洗い場に余計なもの（清潔な物など）が置かれていない'] },
+  { name: 'シンク周囲', items: ['シンクの周囲は見た目にきれいであり、水浸しになっていない', 'シンク周囲にタオル等が濡れたまま置かれていない', 'シンク上に経管栄養セットや洗浄後の物品を掛けていない', 'スポンジが期限内に替えられている', '消毒槽の塩素濃度は500ｐpm以上である', '空気に触れることなく物品の薬液浸漬ができている'] },
+  { name: '廃棄物の管理', items: ['廃棄容器は使用後蓋が閉められている', '段ボールハザードボックスに針が捨てられていない', '廃棄容器は8分目以内である', '廃棄容器から廃棄物が飛び出していない', '廃棄容器が点滴準備台に接していない'] },
+  { name: '点滴準備台', items: ['ミキシング台の上は輸液等による汚染がみられない', 'ミキシング台には必要最低限の物品のみの設置としているか', '投与予定で確認した薬剤の一時保管は後部棚を使用している', 'ミキシング台周囲の棚は整理整頓されている'] },
+  { name: 'リネン庫およびランドリーカート', items: ['清潔リネンをリネン保管庫の外に置きっぱなしにしていない', 'ランドリーカートが廊下に出ていない', '使用後リネンがランドリーカートからはみ出していない'] }
+];
+function getTheme(name) { return THEMES.find(t => t.name === name) || THEMES[0]; }
+let currentTheme = localStorage.getItem('currentTheme') || THEMES[0].name;
+if (!THEMES.some(t => t.name === currentTheme)) currentTheme = THEMES[0].name;
 
 // --- 病棟リスト・連番カウンターはローカルストレージ(軽量データのみ) ---
 let wards = JSON.parse(localStorage.getItem('wards') || 'null') || DEFAULT_WARDS.slice();
@@ -228,8 +310,32 @@ let counters = JSON.parse(localStorage.getItem('counters') || '{}');
 // photos: [{id, filename, blob, ward, dateStr}] 本体はIndexedDBに保存(容量上限が大きく、9枚目以降も撮影できる)
 let photos = [];
 
+// checklist: { "dateStr|theme|ward": {key, dateStr, theme, ward, items:[{text, mark}]} }
+let checklist = {};
+
 let currentWard = '';
 let stream = null;
+// チェック画面の「戻る」先: 'home' または {screen:'review', dateStr}
+let checklistReturnTarget = 'home';
+// チェック画面で表示中のレコードの文脈(過去日の確認・修正時にも使う)
+let checklistCtx = { dateStr: '', theme: '', ward: '' };
+
+function checklistKey(dateStr, theme, ward) { return dateStr + '|' + theme + '|' + ward; }
+
+function getOrCreateChecklist(dateStr, theme, ward) {
+  const key = checklistKey(dateStr, theme, ward);
+  if (!checklist[key]) {
+    checklist[key] = {
+      key, dateStr, theme, ward,
+      items: getTheme(theme).items.map(text => ({ text, mark: '' }))
+    };
+  }
+  return checklist[key];
+}
+
+function isChecklistComplete(rec) {
+  return !!rec && rec.items.length > 0 && rec.items.every(it => it.mark);
+}
 
 const TARGET_BYTES = 500 * 1024; // 目標: 約500KB
 const MAX_DIMENSION = 1600; // 圧縮前の最大辺(px)
@@ -244,8 +350,9 @@ function saveWardsAndCounters() {
 // 保存エラーが発生し9枚目以降シャッターが反応しなくなる不具合があったため移行)
 // ============================================================
 const DB_NAME = 'wardPhotoDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'photos';
+const CHECK_STORE = 'checklist';
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -255,6 +362,10 @@ function openDB() {
       if (!db.objectStoreNames.contains(STORE)) {
         const store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
         store.createIndex('dateStr', 'dateStr');
+      }
+      if (!db.objectStoreNames.contains(CHECK_STORE)) {
+        const cstore = db.createObjectStore(CHECK_STORE, { keyPath: 'key' });
+        cstore.createIndex('dateStr', 'dateStr');
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -298,6 +409,51 @@ async function dbClear() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbPutChecklist(record) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readwrite');
+    tx.objectStore(CHECK_STORE).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetAllChecklist() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readonly');
+    const req = tx.objectStore(CHECK_STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbClearChecklist() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readwrite');
+    tx.objectStore(CHECK_STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbDeleteChecklistByDate(dateStr) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readwrite');
+    const idx = tx.objectStore(CHECK_STORE).index('dateStr');
+    const req = idx.openCursor(IDBKeyRange.only(dateStr));
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) { cursor.delete(); cursor.continue(); }
+    };
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -381,6 +537,17 @@ function show(id) {
   updateBadge();
 }
 
+function renderThemeSelect() {
+  const sel = document.getElementById('theme-select');
+  sel.innerHTML = THEMES.map(t => `<option value="${t.name}"${t.name === currentTheme ? ' selected' : ''}>${t.name}</option>`).join('');
+}
+
+function onThemeChange(name) {
+  currentTheme = name;
+  localStorage.setItem('currentTheme', currentTheme);
+  renderWards();
+}
+
 function updateBadge() {
   document.getElementById('count-badge').textContent = photos.length;
 }
@@ -392,20 +559,153 @@ function getWardPhotoCountToday(ward) {
 }
 
 function renderWards() {
+  renderThemeSelect();
   const grid = document.getElementById('ward-grid');
   grid.innerHTML = '';
   if (wards.length === 0) {
     grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#8E8E93;font-size:14px;padding:24px 0">⚙️ 右上から病棟を追加してください</p>';
     return;
   }
+  const today = getDateStr();
   wards.forEach(w => {
     const cnt = getWardPhotoCountToday(w);
+    const rec = checklist[checklistKey(today, currentTheme, w)];
+    let chipClass = '', chipText = '未実施';
+    if (rec) {
+      if (isChecklistComplete(rec)) { chipClass = 'done'; chipText = '入力済み'; }
+      else { chipClass = 'partial'; chipText = '入力中'; }
+    }
+    if (cnt > 0) chipText += ' ' + cnt + '枚';
     const btn = document.createElement('button');
     btn.className = 'ward-btn';
-    btn.innerHTML = `${w}<span class="count-chip">${cnt > 0 ? cnt + '枚' : '未撮影'}</span>`;
-    btn.onclick = () => openCamera(w);
+    btn.innerHTML = `${w}<span class="count-chip ${chipClass}">${chipText}</span>`;
+    btn.onclick = () => openChecklistScreen(w, currentTheme, today, 'home');
     grid.appendChild(btn);
   });
+}
+
+// --- チェック項目入力画面 ---
+function openChecklistScreen(ward, theme, dateStr, returnTarget) {
+  checklistCtx = { dateStr, theme, ward };
+  checklistReturnTarget = returnTarget;
+  getOrCreateChecklist(dateStr, theme, ward);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-checklist').classList.add('active');
+  renderChecklistScreen();
+}
+
+function closeChecklistScreen() {
+  if (checklistReturnTarget && checklistReturnTarget.screen === 'review') {
+    openReview(checklistReturnTarget.dateStr);
+  } else {
+    show('s-home');
+  }
+}
+
+function renderChecklistScreen() {
+  const { dateStr, theme, ward } = checklistCtx;
+  const rec = getOrCreateChecklist(dateStr, theme, ward);
+  const mmdd = dateStrToMMDD(dateStr);
+
+  document.getElementById('checklist-title').textContent = `${ward}　${theme}（${mmdd}）`;
+
+  const itemsHtml = rec.items.map((it, i) => `
+    <div class="check-item">
+      <div class="check-item-text">${it.text}</div>
+      <div class="mark-btns">
+        <button class="mark-btn${it.mark === '◯' ? ' sel-maru' : ''}" onclick="setMark(${i},'◯')">◯</button>
+        <button class="mark-btn${it.mark === '×' ? ' sel-batsu' : ''}" onclick="setMark(${i},'×')">×</button>
+        <button class="mark-btn${it.mark === 'ー' ? ' sel-bar' : ''}" onclick="setMark(${i},'ー')">ー</button>
+      </div>
+    </div>`).join('');
+  document.getElementById('checklist-items').innerHTML = itemsHtml;
+
+  renderChecklistPhotoSection();
+}
+
+function renderChecklistPhotoSection() {
+  const { dateStr, ward } = checklistCtx;
+  const isToday = dateStr === getDateStr();
+  const wardPhotos = photos.filter(p => p.ward === ward && p.dateStr === dateStr);
+
+  let thumbsHtml = '';
+  if (wardPhotos.length > 0) {
+    galleryObjectUrlsChecklist.forEach(u => URL.revokeObjectURL(u));
+    galleryObjectUrlsChecklist = [];
+    thumbsHtml = '<div class="mini-thumb-row">' + wardPhotos.map(p => {
+      const url = URL.createObjectURL(p.blob);
+      galleryObjectUrlsChecklist.push(url);
+      return `<div class="mini-thumb"><img src="${url}" alt="${p.filename}" loading="lazy"></div>`;
+    }).join('') + '</div>';
+  }
+
+  let btnHtml = '';
+  if (isToday) {
+    btnHtml = `<button class="take-photo-btn" onclick="openCameraFromChecklist()">📷 写真を撮る（${wardPhotos.length}枚撮影済み）</button>`;
+  } else if (wardPhotos.length === 0) {
+    thumbsHtml = '<p class="hint" style="text-align:left;margin-top:8px">この日の写真はありません</p>';
+  }
+
+  document.getElementById('checklist-photo-section').innerHTML =
+    '<div class="section-header">写真' + (isToday ? '' : '（過去日のため追加撮影不可）') + '</div>' + thumbsHtml + btnHtml;
+}
+let galleryObjectUrlsChecklist = [];
+
+function setMark(itemIndex, mark) {
+  const { dateStr, theme, ward } = checklistCtx;
+  const rec = getOrCreateChecklist(dateStr, theme, ward);
+  rec.items[itemIndex].mark = mark;
+  dbPutChecklist(rec).catch(e => console.error(e));
+  renderChecklistScreen();
+}
+
+function openCameraFromChecklist() {
+  openCamera(checklistCtx.ward);
+}
+
+// --- 確認・修正(病棟一覧)画面 ---
+function openReview(dateStr) {
+  reviewDateStr = dateStr;
+  show('s-review');
+  renderReview(dateStr);
+}
+
+let reviewDateStr = null;
+
+function renderReview(dateStr) {
+  const mmdd = dateStrToMMDD(dateStr);
+  const recs = Object.values(checklist).filter(r => r.dateStr === dateStr);
+  const container = document.getElementById('review-content');
+
+  if (recs.length === 0) {
+    container.innerHTML = `<p class="hint" style="margin-top:24px">環境ラウンド${mmdd}のチェック結果はまだありません</p>`;
+    return;
+  }
+
+  const byTheme = {};
+  recs.forEach(r => { (byTheme[r.theme] = byTheme[r.theme] || []).push(r); });
+
+  let html = '';
+  Object.keys(byTheme).forEach(theme => {
+    html += `<div class="section-header">${theme}</div><div class="list-card">`;
+    byTheme[theme]
+      .sort((a, b) => wards.indexOf(a.ward) - wards.indexOf(b.ward))
+      .forEach(r => {
+        const batsuCount = r.items.filter(it => it.mark === '×').length;
+        const maruCount = r.items.filter(it => it.mark === '◯').length;
+        const barCount = r.items.filter(it => it.mark === 'ー').length;
+        const unsetCount = r.items.filter(it => !it.mark).length;
+        let summary = `◯${maruCount} ×${batsuCount} ー${barCount}`;
+        if (unsetCount > 0) summary += ` (未入力${unsetCount})`;
+        html += `<button class="review-item" onclick="openChecklistScreen('${r.ward}','${theme}','${dateStr}',{screen:'review',dateStr:'${dateStr}'})">
+          <span class="review-ward">${r.ward}</span>
+          <span class="review-summary${batsuCount > 0 ? ' has-batsu' : ''}">${summary}</span>
+          <span class="review-chevron">›</span>
+        </button>`;
+      });
+    html += '</div>';
+  });
+  container.innerHTML = html;
 }
 
 // --- 編集画面 ---
@@ -570,7 +870,11 @@ async function takePhoto() {
     updateBadge();
 
     closeCamera();
-    show('s-home');
+    if (document.getElementById('s-checklist').classList.contains('active')) {
+      renderChecklistPhotoSection();
+    } else {
+      show('s-home');
+    }
     showToast('撮影しました: ' + filename);
   } catch (e) {
     console.error(e);
@@ -634,26 +938,197 @@ function downloadPhoto(i) {
 // --- 書き出し(日付ごとにZIPへまとめてAirDrop/保存) ---
 function renderExportSection() {
   const container = document.getElementById('export-section');
-  const dates = [...new Set(photos.map(p => p.dateStr))].sort().reverse();
+  const dateSet = new Set(photos.map(p => p.dateStr));
+  Object.values(checklist).forEach(r => dateSet.add(r.dateStr));
+  const dates = [...dateSet].sort().reverse();
   if (dates.length === 0) { container.innerHTML = ''; return; }
 
   let html = '<div class="section-header">書き出し(AirDrop用)</div><div class="list-card">';
   dates.forEach(ds => {
     const mmdd = dateStrToMMDD(ds);
     const cnt = photos.filter(p => p.dateStr === ds).length;
-    html += `<div class="list-item">
+    html += `<div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px">
       <span>環境ラウンド${mmdd}(${cnt}枚)</span>
-      <button class="add-submit export-btn" onclick="exportDay('${ds}')">まとめて書き出す</button>
+      <div style="display:flex;gap:8px">
+        <button class="add-submit export-btn" style="flex:1;background:#F2F2F7;color:#1C1C1E" onclick="openReview('${ds}')">確認・修正</button>
+        <button class="add-submit export-btn" style="flex:1" onclick="exportDay('${ds}')">まとめて書き出す</button>
+      </div>
     </div>`;
   });
-  html += '</div><p class="hint" style="margin-top:8px;text-align:left">「書き出す」を押すとZIPが1つ作成されます。AirDrop送信後、Mac側でダブルクリックすると「環境ラウンドMMDD」フォルダとして展開されます。</p>';
+  html += '</div><p class="hint" style="margin-top:8px;text-align:left">「書き出す」を押すとZIPが1つ作成されます(写真フォルダ・チェック結果Excel・PowerPoint)。AirDrop送信後、Mac側でダブルクリックすると「環境ラウンドMMDD」フォルダとして展開されます。</p>';
   container.innerHTML = html;
+}
+
+// --- Excel(チェック結果)生成 ---
+function sanitizeSheetName(name) {
+  return name.replace(/[:\\\/\?\*\[\]]/g, '').slice(0, 31);
+}
+
+function buildChecklistSheetRows(theme, entries) {
+  const rows = [];
+  rows.push(['テーマ：' + theme]);
+  rows.push(['実施者(敬称略):']);
+  rows.push([]);
+  rows.push(['確認結果（達成度）']);
+  rows.push(['〇：できている【現状が維持されるか継続して確認する】']);
+  rows.push(['×：できていない【早急に改善する必要がある】', '', '', 'ー：今回は実施していない']);
+  rows.push([]);
+  const itemCount = getTheme(theme).items.length;
+  for (let i = 0; i < entries.length; i += 2) {
+    const left = entries[i], right = entries[i + 1];
+    for (let j = 0; j < itemCount; j++) {
+      const row = ['', '', '', '', '', ''];
+      row[0] = j === 0 ? left.ward : '';
+      row[1] = left.items[j].mark;
+      row[2] = left.items[j].text;
+      if (right) {
+        row[3] = j === 0 ? right.ward : '';
+        row[4] = right.items[j].mark;
+        row[5] = right.items[j].text;
+      }
+      rows.push(row);
+    }
+    rows.push([]);
+  }
+  return rows;
+}
+
+function buildXlsxBlob(dateStr, groupedByTheme) {
+  const mmdd = dateStrToMMDD(dateStr);
+  const wb = XLSX.utils.book_new();
+  Object.keys(groupedByTheme).forEach(theme => {
+    const rows = buildChecklistSheetRows(theme, groupedByTheme[theme]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 8 }, { wch: 4 }, { wch: 38 }, { wch: 8 }, { wch: 4 }, { wch: 38 }];
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(mmdd + '(' + theme + ')'));
+  });
+  const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([out], { type: 'application/octet-stream' });
+}
+
+// --- PowerPoint(チェック結果+写真)生成 ---
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function getImageSize(blob) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { resolve({ w: img.naturalWidth || 4, h: img.naturalHeight || 3 }); URL.revokeObjectURL(url); };
+    img.onerror = () => { resolve({ w: 4, h: 3 }); URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+}
+
+// 変形させず(縦横比を保ったまま)枠の中に収める配置を計算
+function containRect(box, imgW, imgH) {
+  const boxAr = box.w / box.h;
+  const imgAr = imgW / imgH;
+  let w, h;
+  if (imgAr > boxAr) { w = box.w; h = box.w / imgAr; }
+  else { h = box.h; w = box.h * imgAr; }
+  return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h };
+}
+
+// 右側写真エリアの枠割り(1枚=全面、2枚=上下、3枚=上+下2分割)。既存マクロのレイアウトを踏襲
+function photoBoxesFor(count) {
+  const RIGHT = { x: 5.5, y: 0.35, w: 7.5, h: 6.8 };
+  if (count <= 1) return [{ x: RIGHT.x, y: RIGHT.y, w: RIGHT.w, h: RIGHT.h }];
+  const gap = 0.15;
+  const topH = RIGHT.h * 0.49;
+  const bottomY = RIGHT.y + topH + gap;
+  const bottomH = RIGHT.h - topH - gap;
+  if (count === 2) {
+    return [
+      { x: RIGHT.x, y: RIGHT.y, w: RIGHT.w, h: topH },
+      { x: RIGHT.x, y: bottomY, w: RIGHT.w, h: bottomH }
+    ];
+  }
+  const halfW = (RIGHT.w - gap) / 2;
+  return [
+    { x: RIGHT.x, y: RIGHT.y, w: RIGHT.w, h: topH },
+    { x: RIGHT.x, y: bottomY, w: halfW, h: bottomH },
+    { x: RIGHT.x + halfW + gap, y: bottomY, w: halfW, h: bottomH }
+  ];
+}
+
+const MARK_COLOR = { '◯': '2E7D32', '×': 'C62828', 'ー': '9E9E9E' };
+
+async function buildPptxBlobForTheme(entries) {
+  const pres = new PptxGenJS();
+  pres.layout = 'LAYOUT_WIDE';
+
+  for (const entry of entries) {
+    const slide = pres.addSlide();
+
+    slide.addShape('rect', { x: 0.3, y: 0.3, w: 4.6, h: 0.7, fill: { color: '007AFF' }, line: { type: 'none' } });
+    slide.addText(entry.ward, { x: 0.3, y: 0.3, w: 4.6, h: 0.7, align: 'center', valign: 'middle', color: 'FFFFFF', bold: true, fontSize: 24, fontFace: 'メイリオ' });
+
+    const rowH = 0.55;
+    let y = 1.15;
+    let batsuCount = 0, allBar = true;
+    entry.items.forEach(it => {
+      if (it.mark === '×') batsuCount++;
+      if (it.mark !== 'ー') allBar = false;
+      const fillColor = MARK_COLOR[it.mark] || '9E9E9E';
+      slide.addShape('roundRect', { x: 0.3, y, w: 0.55, h: 0.42, fill: { color: fillColor }, line: { type: 'none' }, rectRadius: 0.06 });
+      slide.addText(it.mark || '-', { x: 0.3, y, w: 0.55, h: 0.42, align: 'center', valign: 'middle', color: 'FFFFFF', bold: true, fontSize: 16 });
+      slide.addText(it.text, { x: 1.0, y, w: 3.9, h: rowH - 0.03, valign: 'middle', color: '000000', bold: true, fontSize: 11, fontFace: 'メイリオ', wrap: true });
+      y += rowH;
+    });
+
+    const wardPhotos = entry.photos.slice(0, 3);
+    const boxes = photoBoxesFor(wardPhotos.length);
+    for (let i = 0; i < wardPhotos.length; i++) {
+      const box = boxes[i];
+      slide.addShape('rect', { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: 'F2F2F2' }, line: { color: 'E5E5EA', width: 1 } });
+      const [dataUrl, size] = await Promise.all([blobToDataURL(wardPhotos[i].blob), getImageSize(wardPhotos[i].blob)]);
+      const r = containRect(box, size.w, size.h);
+      slide.addImage({ data: dataUrl, x: r.x, y: r.y, w: r.w, h: r.h });
+    }
+    if (wardPhotos.length === 0) {
+      const box = boxes[0];
+      slide.addShape('rect', { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: 'F2F2F2' }, line: { color: 'E5E5EA', width: 1 } });
+      slide.addText('写真なし', { x: box.x, y: box.y, w: box.w, h: box.h, align: 'center', valign: 'middle', color: 'C7C7CC', fontSize: 14 });
+    }
+
+    // ×が0件、かつ全項目が「ー」ではない(=実施して評価済み)場合のみExcellentバッジ
+    if (batsuCount === 0 && !allBar) {
+      slide.addShape('ellipseRibbon2', { x: 9.6, y: 0.15, w: 3.2, h: 0.62, fill: { color: 'FF99FF' }, line: { color: 'FFFF00', width: 1 } });
+      slide.addText('Excellent!', { x: 9.6, y: 0.15, w: 3.2, h: 0.62, align: 'center', valign: 'middle', color: 'FFFFFF', bold: true, fontSize: 20 });
+    }
+  }
+
+  return await pres.write('blob');
+}
+
+function getChecklistEntriesForDate(dateStr) {
+  const byTheme = {};
+  Object.values(checklist)
+    .filter(r => r.dateStr === dateStr)
+    .sort((a, b) => wards.indexOf(a.ward) - wards.indexOf(b.ward))
+    .forEach(r => {
+      const entry = { ward: r.ward, items: r.items, photos: photos.filter(p => p.ward === r.ward && p.dateStr === dateStr) };
+      (byTheme[r.theme] = byTheme[r.theme] || []).push(entry);
+    });
+  return byTheme;
 }
 
 async function exportDay(dateStr) {
   const dayPhotos = photos.filter(p => p.dateStr === dateStr);
-  if (dayPhotos.length === 0) { showToast('対象の写真がありません'); return; }
-  if (typeof JSZip === 'undefined') { showToast('書き出し機能の読み込みに失敗しました。オンライン状態で再度お試しください'); return; }
+  const byTheme = getChecklistEntriesForDate(dateStr);
+  const hasChecklist = Object.keys(byTheme).length > 0;
+  if (dayPhotos.length === 0 && !hasChecklist) { showToast('対象のデータがありません'); return; }
+  if (typeof JSZip === 'undefined' || typeof XLSX === 'undefined' || typeof PptxGenJS === 'undefined') {
+    showToast('書き出し機能の読み込みに失敗しました。オンライン状態で再度お試しください');
+    return;
+  }
 
   const mmdd = dateStrToMMDD(dateStr);
   const zipFilename = '環境ラウンド' + mmdd + '.zip';
@@ -663,6 +1138,17 @@ async function exportDay(dateStr) {
     const zip = new JSZip();
     const folder = zip.folder('環境ラウンド' + mmdd);
     dayPhotos.forEach(p => folder.file(p.filename, p.blob));
+
+    if (hasChecklist) {
+      const xlsxBlob = buildXlsxBlob(dateStr, byTheme);
+      zip.file('環境ラウンド' + mmdd + '.xlsx', xlsxBlob);
+
+      for (const theme of Object.keys(byTheme)) {
+        const pptxBlob = await buildPptxBlobForTheme(byTheme[theme]);
+        zip.file('環境ラウンド' + mmdd + '(' + theme + ').pptx', pptxBlob);
+      }
+    }
+
     const zipBlob = await zip.generateAsync({ type: 'blob' });
 
     const actioned = await shareOrDownload(zipBlob, zipFilename, 'application/zip');
@@ -681,15 +1167,17 @@ async function deleteDay(dateStr) {
     await dbDelete(p.id);
   }
   photos = photos.filter(p => p.dateStr !== dateStr);
+  await dbDeleteChecklistByDate(dateStr);
+  Object.keys(checklist).forEach(k => { if (checklist[k].dateStr === dateStr) delete checklist[k]; });
   updateBadge();
   renderGallery();
   renderWards();
-  showToast('この日の写真を削除しました');
+  showToast('この日の写真・チェック結果を削除しました');
 }
 
 // --- 削除確認モーダル(全削除) ---
 function confirmClearAll() {
-  if (photos.length === 0) { showToast('写真がありません'); return; }
+  if (photos.length === 0 && Object.keys(checklist).length === 0) { showToast('データがありません'); return; }
   document.getElementById('clear-modal').classList.add('active');
 }
 
@@ -699,7 +1187,9 @@ function closeClearModal() {
 
 async function clearAll() {
   await dbClear();
+  await dbClearChecklist();
   photos = [];
+  checklist = {};
   counters = {};
   saveWardsAndCounters();
   closeClearModal();
@@ -746,6 +1236,14 @@ async function init() {
   } catch (e) {
     console.error(e);
     photos = [];
+  }
+  try {
+    const records = await dbGetAllChecklist();
+    checklist = {};
+    records.forEach(r => { checklist[r.key] = r; });
+  } catch (e) {
+    console.error(e);
+    checklist = {};
   }
   saveWardsAndCounters();
   renderWards();

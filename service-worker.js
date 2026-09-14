@@ -1,10 +1,12 @@
 // キャッシュ名を変えるとアプリ本体を更新できます(新しいバージョンをデプロイしたら v1 → v2 のように上げてください)
-const CACHE_NAME = 'ward-photo-app-v1';
+const CACHE_NAME = 'ward-photo-app-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './jszip.min.js',
+  './xlsx.full.min.js',
+  './pptxgen.bundle.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
