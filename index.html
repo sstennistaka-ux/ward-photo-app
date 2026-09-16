@@ -151,11 +151,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
   </div>
   <div class="content">
     <div class="theme-row">
+      <label for="round-date-input">日付</label>
+      <input type="date" id="round-date-input" class="theme-select" onchange="onDateChange(this.value)">
+    </div>
+    <div class="theme-row">
       <label for="theme-select">テーマ</label>
       <select class="theme-select" id="theme-select" onchange="onThemeChange(this.value)"></select>
     </div>
     <div class="ward-grid" id="ward-grid"></div>
-    <p class="hint">病棟ボタンをタップ → チェック項目の入力 → 撮影<br>(本日・選択中テーマの入力状況を表示しています)</p>
+    <p class="hint" id="home-hint">病棟ボタンをタップ → チェック項目の入力 → 撮影<br>(選択中の日付・テーマの入力状況を表示しています)</p>
   </div>
 </div>
 
@@ -505,6 +509,35 @@ function dateStrToMMDD(dateStr) {
   return dateStr.slice(2); // yymmdd → mmdd
 }
 
+// yymmdd ⇔ <input type="date">用の YYYY-MM-DD
+function dateStrToISO(dateStr) {
+  return '20' + dateStr.slice(0, 2) + '-' + dateStr.slice(2, 4) + '-' + dateStr.slice(4, 6);
+}
+function isoToDateStr(iso) {
+  const [y, m, d] = iso.split('-');
+  return y.slice(2) + m + d;
+}
+
+// --- ラウンド日付(既定は本日。日付選択で過去日の入力・修正も可能) ---
+let currentDateStr = getDateStr();
+
+function renderDateInput() {
+  document.getElementById('round-date-input').value = dateStrToISO(currentDateStr);
+  document.getElementById('round-date-input').max = dateStrToISO(getDateStr());
+  const hint = document.getElementById('home-hint');
+  if (hint) {
+    hint.innerHTML = currentDateStr === getDateStr()
+      ? '病棟ボタンをタップ → チェック項目の入力 → 撮影<br>(選択中の日付・テーマの入力状況を表示しています)'
+      : '過去日を表示中です(撮影は本日分のみ可能。チェック項目の修正はできます)';
+  }
+}
+
+function onDateChange(iso) {
+  if (!iso) return;
+  currentDateStr = isoToDateStr(iso);
+  renderWards();
+}
+
 // --- ファイル名を生成（1枚目は病棟名のみ、2枚目以降は 病棟-02, 病棟-03... ） ---
 function buildFilename(ward, n) {
   return n <= 1 ? ward : ward + '-' + String(n).padStart(2, '0');
@@ -552,24 +585,19 @@ function updateBadge() {
   document.getElementById('count-badge').textContent = photos.length;
 }
 
-// --- 病棟ホーム（本日撮影分の枚数を表示） ---
-function getWardPhotoCountToday(ward) {
-  const today = getDateStr();
-  return photos.filter(p => p.ward === ward && p.dateStr === today).length;
-}
-
+// --- 病棟ホーム（選択中の日付の枚数を表示） ---
 function renderWards() {
   renderThemeSelect();
+  renderDateInput();
   const grid = document.getElementById('ward-grid');
   grid.innerHTML = '';
   if (wards.length === 0) {
     grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#8E8E93;font-size:14px;padding:24px 0">⚙️ 右上から病棟を追加してください</p>';
     return;
   }
-  const today = getDateStr();
   wards.forEach(w => {
-    const cnt = getWardPhotoCountToday(w);
-    const rec = checklist[checklistKey(today, currentTheme, w)];
+    const cnt = photos.filter(p => p.ward === w && p.dateStr === currentDateStr).length;
+    const rec = checklist[checklistKey(currentDateStr, currentTheme, w)];
     let chipClass = '', chipText = '未実施';
     if (rec) {
       if (isChecklistComplete(rec)) { chipClass = 'done'; chipText = '入力済み'; }
@@ -579,7 +607,7 @@ function renderWards() {
     const btn = document.createElement('button');
     btn.className = 'ward-btn';
     btn.innerHTML = `${w}<span class="count-chip ${chipClass}">${chipText}</span>`;
-    btn.onclick = () => openChecklistScreen(w, currentTheme, today, 'home');
+    btn.onclick = () => openChecklistScreen(w, currentTheme, currentDateStr, 'home');
     grid.appendChild(btn);
   });
 }
@@ -1058,11 +1086,34 @@ function photoBoxesFor(count) {
   ];
 }
 
-const MARK_COLOR = { '◯': '2E7D32', '×': 'C62828', 'ー': '9E9E9E' };
+const MARK_COLOR = { '◯': '1565C0', '×': 'C62828', 'ー': '9E9E9E' };
 
-async function buildPptxBlobForTheme(entries) {
+// --- 表紙スライド(環境ラウンド元データ.pptxの1枚目のレイアウトを踏襲) ---
+function formatDateJa(dateStr) {
+  const mmdd = dateStrToMMDD(dateStr);
+  return '20' + dateStr.slice(0, 2) + '年' + Number(mmdd.slice(0, 2)) + '月' + Number(mmdd.slice(2, 4)) + '日';
+}
+
+function addCoverSlide(pres, theme, dateStr) {
+  const slide = pres.addSlide();
+  slide.addText('環境ラウンド', {
+    x: 0.5, y: 2.3, w: 12.33, h: 1.6, align: 'center', valign: 'middle',
+    fontSize: 40, bold: true, color: '1C1C1E', fontFace: 'メイリオ'
+  });
+  slide.addText(theme, {
+    x: 0.5, y: 3.9, w: 12.33, h: 0.9, align: 'center', valign: 'middle',
+    fontSize: 26, bold: true, color: '007AFF', fontFace: 'メイリオ'
+  });
+  slide.addText(formatDateJa(dateStr), {
+    x: 0.5, y: 4.75, w: 12.33, h: 0.7, align: 'center', valign: 'middle',
+    fontSize: 20, color: '3C3C43', fontFace: 'メイリオ'
+  });
+}
+
+async function buildPptxBlobForTheme(theme, dateStr, entries) {
   const pres = new PptxGenJS();
   pres.layout = 'LAYOUT_WIDE';
+  addCoverSlide(pres, theme, dateStr);
 
   for (const entry of entries) {
     const slide = pres.addSlide();
@@ -1078,7 +1129,7 @@ async function buildPptxBlobForTheme(entries) {
       if (it.mark !== 'ー') allBar = false;
       const fillColor = MARK_COLOR[it.mark] || '9E9E9E';
       slide.addShape('roundRect', { x: 0.3, y, w: 0.55, h: 0.42, fill: { color: fillColor }, line: { type: 'none' }, rectRadius: 0.06 });
-      slide.addText(it.mark || '-', { x: 0.3, y, w: 0.55, h: 0.42, align: 'center', valign: 'middle', color: 'FFFFFF', bold: true, fontSize: 16 });
+      slide.addText(it.mark || '-', { x: 0.3, y, w: 0.55, h: 0.42, align: 'center', valign: 'middle', margin: 0, color: 'FFFFFF', bold: true, fontSize: 16 });
       slide.addText(it.text, { x: 1.0, y, w: 3.9, h: rowH - 0.03, valign: 'middle', color: '000000', bold: true, fontSize: 11, fontFace: 'メイリオ', wrap: true });
       y += rowH;
     });
@@ -1144,7 +1195,7 @@ async function exportDay(dateStr) {
       zip.file('環境ラウンド' + mmdd + '.xlsx', xlsxBlob);
 
       for (const theme of Object.keys(byTheme)) {
-        const pptxBlob = await buildPptxBlobForTheme(byTheme[theme]);
+        const pptxBlob = await buildPptxBlobForTheme(theme, dateStr, byTheme[theme]);
         zip.file('環境ラウンド' + mmdd + '(' + theme + ').pptx', pptxBlob);
       }
     }
