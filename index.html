@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>病棟フォトアプリ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007AFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="病棟フォト">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;background:#F2F2F7;color:#1C1C1E;min-height:100vh}
@@ -24,22 +32,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .ward-btn{background:#fff;border:none;border-radius:14px;padding:20px 12px;font-size:15px;font-weight:600;color:#1C1C1E;cursor:pointer;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);transition:transform 0.1s,box-shadow 0.1s;display:flex;flex-direction:column;align-items:center;gap:8px}
 .ward-btn:active{transform:scale(0.96);box-shadow:0 0 0 rgba(0,0,0,0)}
 .ward-btn .count-chip{font-size:11px;font-weight:500;color:#8E8E93;background:#F2F2F7;border-radius:8px;padding:2px 8px}
-.ward-cell{display:flex;flex-direction:column;gap:4px}
-.ward-cell .ward-btn{width:100%}
-.ward-manage{background:none;border:none;color:#007AFF;font-size:13px;font-weight:600;padding:8px;cursor:pointer}
-
-/* 病棟別 写真管理シート */
-.photo-sheet{max-height:80vh;display:flex;flex-direction:column}
-.photo-sheet-list{overflow-y:auto;margin-bottom:12px}
-.photo-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid #F2F2F7}
-.photo-row img{width:72px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0}
-.photo-row span{flex:1;font-size:15px;font-weight:600;word-break:break-all}
-.photo-row button{background:#FF3B30;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
 
 /* 編集画面 */
 .section-header{font-size:13px;font-weight:600;color:#8E8E93;text-transform:uppercase;letter-spacing:0.5px;padding:16px 0 8px}
 .list-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
-.list-item{display:flex;align-items:center;padding:14px 16px;border-bottom:0.5px solid #F2F2F7}
+.list-item{display:flex;align-items:center;padding:14px 16px;border-bottom:0.5px solid #F2F2F7;gap:10px}
 .list-item:last-child{border-bottom:none}
 .list-item span{flex:1;font-size:15px;color:#1C1C1E}
 .del-btn{background:none;border:none;cursor:pointer;font-size:22px;color:#FF3B30;padding:2px 4px;line-height:1}
@@ -47,8 +44,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .add-input{flex:1;font-size:15px;padding:12px 14px;border:0.5px solid #C6C6C8;border-radius:12px;background:#fff;color:#1C1C1E;outline:none}
 .add-input:focus{border-color:#007AFF}
 .add-input::placeholder{color:#C7C7CC}
-.add-submit{background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer}
+.add-submit{background:#007AFF;color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;flex-shrink:0}
 .add-submit:active{background:#0062CC}
+.add-submit:disabled{opacity:0.5}
+.export-btn{padding:9px 14px;font-size:13px}
 
 /* カメラ */
 #camera-overlay{display:none;position:fixed;inset:0;height:100vh;height:100dvh;background:#000;z-index:200;flex-direction:column;overflow:hidden}
@@ -68,7 +67,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 /* ギャラリー */
 .gallery-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .photo-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
-.photo-card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.photo-card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#eee}
 .photo-meta{padding:8px 10px;display:flex;align-items:flex-start;gap:4px}
 .photo-name{flex:1;font-size:10px;color:#8E8E93;line-height:1.4;word-break:break-all}
 .dl-btn{background:none;border:none;cursor:pointer;color:#007AFF;font-size:18px;padding:2px;flex-shrink:0;line-height:1}
@@ -81,23 +80,59 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 .back-btn span{font-size:17px}
 
 /* トースト */
-.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,0.78);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(0,0,0,0.78);color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:opacity 0.25s,transform 0.25s;z-index:999;white-space:nowrap;pointer-events:none;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ヒント */
 .hint{font-size:12px;color:#8E8E93;text-align:center;margin-top:16px;line-height:1.6}
 
-/* 削除確認 */
+/* 削除確認・書き出し完了 */
 .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;align-items:flex-end;justify-content:center}
 .modal-backdrop.active{display:flex}
 .modal-sheet{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px}
 .modal-sheet h3{font-size:17px;font-weight:600;margin-bottom:8px;text-align:center}
-.modal-sheet p{font-size:14px;color:#8E8E93;margin-bottom:20px;text-align:center}
+.modal-sheet p{font-size:14px;color:#8E8E93;margin-bottom:20px;text-align:center;line-height:1.6}
 .modal-btns{display:flex;flex-direction:column;gap:10px}
 .modal-btns button{padding:14px;border-radius:12px;font-size:16px;font-weight:600;border:none;cursor:pointer}
 .btn-danger{background:#FF3B30;color:#fff}
 .btn-danger:active{background:#D93025}
+.btn-primary{background:#007AFF;color:#fff}
+.btn-primary:active{background:#0062CC}
 .btn-cancel{background:#F2F2F7;color:#1C1C1E}
+
+/* テーマ選択 */
+.theme-row{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.theme-row label{font-size:13px;color:#8E8E93;flex-shrink:0}
+.theme-select{flex:1;font-size:15px;font-weight:600;color:#1C1C1E;border:none;background:transparent;outline:none}
+
+/* 病棟ボタンの状態チップ */
+.count-chip.done{background:#E6F4EA;color:#2E7D32}
+.count-chip.partial{background:#FFF4E5;color:#B26A00}
+
+/* チェック項目リスト */
+.check-item{padding:14px 16px;border-bottom:0.5px solid #F2F2F7}
+.check-item:last-child{border-bottom:none}
+.check-item-text{font-size:14px;color:#1C1C1E;line-height:1.5;margin-bottom:10px}
+.mark-btns{display:flex;gap:8px}
+.mark-btn{flex:1;padding:10px 0;border-radius:10px;border:1.5px solid #E5E5EA;background:#fff;font-size:16px;font-weight:700;cursor:pointer;color:#8E8E93}
+.mark-btn.sel-maru{background:#1565C0;border-color:#1565C0;color:#fff}
+.mark-btn.sel-batsu{background:#C62828;border-color:#C62828;color:#fff}
+.mark-btn.sel-bar{background:#9E9E9E;border-color:#9E9E9E;color:#fff}
+
+/* ミニ写真ストリップ */
+.mini-thumb-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mini-thumb{width:64px;height:64px;border-radius:10px;overflow:hidden;background:#eee}
+.mini-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.take-photo-btn{width:100%;margin-top:14px;background:#007AFF;color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:600;cursor:pointer}
+.take-photo-btn:active{background:#0062CC}
+
+/* レビュー画面 */
+.review-item{display:flex;align-items:center;padding:14px 16px;border-bottom:0.5px solid #F2F2F7;gap:10px;cursor:pointer;background:none;border-left:none;border-right:none;border-top:none;width:100%;text-align:left}
+.review-item:last-child{border-bottom:none}
+.review-ward{font-size:15px;font-weight:600;color:#1C1C1E;flex:1}
+.review-summary{font-size:13px;color:#8E8E93}
+.review-summary.has-batsu{color:#C62828;font-weight:600}
+.review-chevron{color:#C7C7CC}
 </style>
 </head>
 <body>
@@ -115,8 +150,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
     </button>
   </div>
   <div class="content">
+    <div class="theme-row">
+      <label for="round-date-input">日付</label>
+      <input type="date" id="round-date-input" class="theme-select" onchange="onDateChange(this.value)">
+    </div>
+    <div class="theme-row">
+      <label for="theme-select">テーマ</label>
+      <select class="theme-select" id="theme-select" onchange="onThemeChange(this.value)"></select>
+    </div>
     <div class="ward-grid" id="ward-grid"></div>
-    <p class="hint">病棟ボタンをタップ → カメラ起動<br>撮影後に自動でファイル名が付きます</p>
+    <p class="hint" id="home-hint">病棟ボタンをタップ → チェック項目の入力 → 撮影<br>(選択中の日付・テーマの入力状況を表示しています)</p>
   </div>
 </div>
 
@@ -154,12 +197,42 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
     </button>
   </div>
   <div class="content">
+    <div id="export-section"></div>
+    <div class="section-header" id="gallery-section-header" style="display:none">プレビュー</div>
     <div class="gallery-grid" id="gallery-grid"></div>
     <div class="empty" id="empty-state">
       <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#C7C7CC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       <p>写真がありません</p>
     </div>
   </div>
+</div>
+
+<!-- チェック項目入力画面 -->
+<div id="s-checklist" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="closeChecklistScreen()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>病棟選択に戻る</span>
+    </button>
+  </div>
+  <div class="content">
+    <div class="section-header" id="checklist-title"></div>
+    <div class="list-card" id="checklist-items"></div>
+    <div id="checklist-photo-section"></div>
+  </div>
+</div>
+
+<!-- 確認・修正(病棟一覧)画面 -->
+<div id="s-review" class="screen">
+  <div class="header">
+    <button class="back-btn" onclick="show('s-gallery')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>戻る</span>
+    </button>
+    <h1>確認・修正</h1>
+    <div style="width:64px"></div>
+  </div>
+  <div class="content" id="review-content"></div>
 </div>
 
 <!-- カメラオーバーレイ -->
@@ -183,7 +256,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 <div class="modal-backdrop" id="clear-modal">
   <div class="modal-sheet">
     <h3>全て削除しますか？</h3>
-    <p>アプリ内の写真データが全て消去されます。ダウンロード済みの写真は残ります。</p>
+    <p>アプリ内の写真データ(未書き出し分も含む)が全て消去されます。</p>
     <div class="modal-btns">
       <button class="btn-danger" onclick="clearAll()">全て削除</button>
       <button class="btn-cancel" onclick="closeClearModal()">キャンセル</button>
@@ -191,14 +264,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
   </div>
 </div>
 
-<!-- 病棟別 写真の確認・削除 -->
-<div class="modal-backdrop" id="ward-photos-modal">
-  <div class="modal-sheet photo-sheet">
-    <h3 id="ward-photos-title"></h3>
-    <p>削除する写真の「削除」をタップしてください</p>
-    <div class="photo-sheet-list" id="ward-photos-list"></div>
+<!-- 書き出し完了モーダル -->
+<div class="modal-backdrop" id="export-done-modal">
+  <div class="modal-sheet">
+    <h3>書き出し完了</h3>
+    <p id="export-done-desc"></p>
     <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeWardPhotos()">閉じる</button>
+      <button class="btn-danger" id="export-done-delete-btn">この端末から削除する</button>
+      <button class="btn-cancel" onclick="closeExportDoneModal()">残しておく</button>
     </div>
   </div>
 </div>
@@ -206,78 +279,224 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','H
 <!-- トースト -->
 <div class="toast" id="toast"></div>
 
+<script src="jszip.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="pptxgen.bundle.js"></script>
 <script>
 // --- 病棟の初期リスト ---
-const WARDS_VERSION = 'v3-2026';
-const DEFAULT_WARDS = ['8N','8S','7N','7S','6N','6S','5N','5S','4N','4S','3S','SCU','ICU','NICU','QQ'];
+const WARDS_VERSION = 'v2-2026';
+const DEFAULT_WARDS = ['8N','8S','7N','7S','6N','6S','5N','5S','4N','4S','3N','SCU','ICU','NICU','QQ'];
 
-// --- データ管理 ---
+// --- 環境ラウンドのテーマとチェック項目(環境ラウンド.xlsmより) ---
+const THEMES = [
+  { name: '洗浄室', items: ['洗浄後の物品が乾燥させてある', '清潔（洗浄後物品）と不潔が混在していない', '汚物処理槽に汚物が停滞していない', '個人防護具が使用出来るところに置かれている', '使用済み尿器などが床に直置きされていない', '濡れたタオルが敷きっぱなしになっていない'] },
+  { name: '薬品保冷庫', items: ['期限切れの薬品がない', '複数回使用のバイアルには開封日を記入している', '吸入薬品に開封日が記載されている', '薬品保冷庫内に薬品と飲食物を分けて保管している'] },
+  { name: 'ナースステーション内手洗いシンク', items: ['手洗い手順のポスターが貼られている', '予備のペーパータオルがおかれていない', '手洗い場のシンク周囲が汚れていない', '手洗い場に余計なもの（清潔な物など）が置かれていない'] },
+  { name: 'シンク周囲', items: ['シンクの周囲は見た目にきれいであり、水浸しになっていない', 'シンク周囲にタオル等が濡れたまま置かれていない', 'シンク上に経管栄養セットや洗浄後の物品を掛けていない', 'スポンジが期限内に替えられている', '消毒槽の塩素濃度は500ｐpm以上である', '空気に触れることなく物品の薬液浸漬ができている'] },
+  { name: '廃棄物の管理', items: ['廃棄容器は使用後蓋が閉められている', '段ボールハザードボックスに針が捨てられていない', '廃棄容器は8分目以内である', '廃棄容器から廃棄物が飛び出していない', '廃棄容器が点滴準備台に接していない'] },
+  { name: '点滴準備台', items: ['ミキシング台の上は輸液等による汚染がみられない', 'ミキシング台には必要最低限の物品のみの設置としているか', '投与予定で確認した薬剤の一時保管は後部棚を使用している', 'ミキシング台周囲の棚は整理整頓されている'] },
+  { name: 'リネン庫およびランドリーカート', items: ['清潔リネンをリネン保管庫の外に置きっぱなしにしていない', 'ランドリーカートが廊下に出ていない', '使用後リネンがランドリーカートからはみ出していない'] }
+];
+function getTheme(name) { return THEMES.find(t => t.name === name) || THEMES[0]; }
+let currentTheme = localStorage.getItem('currentTheme') || THEMES[0].name;
+if (!THEMES.some(t => t.name === currentTheme)) currentTheme = THEMES[0].name;
+
+// --- 病棟リスト・連番カウンターはローカルストレージ(軽量データのみ) ---
 let wards = JSON.parse(localStorage.getItem('wards') || 'null') || DEFAULT_WARDS.slice();
 if (localStorage.getItem('wardsVersion') !== WARDS_VERSION) {
   wards = DEFAULT_WARDS.slice();
   localStorage.setItem('wardsVersion', WARDS_VERSION);
 }
-// photos: [{filename, dataUrl, ward, dateStr}]
-let photos = JSON.parse(localStorage.getItem('photos') || '[]');
-// カウンター: 病棟ごとの連番 {"5N": 3, ...}
+// counters: 日付(yymmdd)+病棟ごとの連番 {"260914|5N": 3, ...} → 日をまたぐとリセットされ、
+// マクロが期待する「その日のフォルダでは1枚目=メイン(病棟名のみ)」に一致する
 let counters = JSON.parse(localStorage.getItem('counters') || '{}');
+
+// photos: [{id, filename, blob, ward, dateStr}] 本体はIndexedDBに保存(容量上限が大きく、9枚目以降も撮影できる)
+let photos = [];
+
+// checklist: { "dateStr|theme|ward": {key, dateStr, theme, ward, items:[{text, mark}]} }
+let checklist = {};
 
 let currentWard = '';
 let stream = null;
+// チェック画面の「戻る」先: 'home' または {screen:'review', dateStr}
+let checklistReturnTarget = 'home';
+// チェック画面で表示中のレコードの文脈(過去日の確認・修正時にも使う)
+let checklistCtx = { dateStr: '', theme: '', ward: '' };
+
+function checklistKey(dateStr, theme, ward) { return dateStr + '|' + theme + '|' + ward; }
+
+function getOrCreateChecklist(dateStr, theme, ward) {
+  const key = checklistKey(dateStr, theme, ward);
+  if (!checklist[key]) {
+    checklist[key] = {
+      key, dateStr, theme, ward,
+      items: getTheme(theme).items.map(text => ({ text, mark: '' }))
+    };
+  }
+  return checklist[key];
+}
+
+function isChecklistComplete(rec) {
+  return !!rec && rec.items.length > 0 && rec.items.every(it => it.mark);
+}
 
 const TARGET_BYTES = 500 * 1024; // 目標: 約500KB
 const MAX_DIMENSION = 1600; // 圧縮前の最大辺(px)
 
-function saveAll() {
+function saveWardsAndCounters() {
   localStorage.setItem('wards', JSON.stringify(wards));
-  localStorage.setItem('photos', JSON.stringify(photos));
   localStorage.setItem('counters', JSON.stringify(counters));
 }
 
+// ============================================================
+// IndexedDB(写真本体の保存先。localStorageは容量が小さく、8枚前後で
+// 保存エラーが発生し9枚目以降シャッターが反応しなくなる不具合があったため移行)
+// ============================================================
+const DB_NAME = 'wardPhotoDB';
+const DB_VERSION = 2;
+const STORE = 'photos';
+const CHECK_STORE = 'checklist';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('dateStr', 'dateStr');
+      }
+      if (!db.objectStoreNames.contains(CHECK_STORE)) {
+        const cstore = db.createObjectStore(CHECK_STORE, { keyPath: 'key' });
+        cstore.createIndex('dateStr', 'dateStr');
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+const dbPromise = openDB();
+
+async function dbAdd(record) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    const req = tx.objectStore(STORE).add(record);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbGetAll() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbDelete(id) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbClear() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbPutChecklist(record) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readwrite');
+    tx.objectStore(CHECK_STORE).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbGetAllChecklist() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readonly');
+    const req = tx.objectStore(CHECK_STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbClearChecklist() {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readwrite');
+    tx.objectStore(CHECK_STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbDeleteChecklistByDate(dateStr) {
+  const db = await dbPromise;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHECK_STORE, 'readwrite');
+    const idx = tx.objectStore(CHECK_STORE).index('dateStr');
+    const req = idx.openCursor(IDBKeyRange.only(dateStr));
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) { cursor.delete(); cursor.continue(); }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // --- ファイルとしてダウンロード保存（共有シートが使えない場合のフォールバック） ---
-function downloadFile(dataUrl, filename) {
+function downloadFile(href, filename) {
   const a = document.createElement('a');
-  a.href = dataUrl;
+  a.href = href;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
 }
 
-// --- dataURL を同期的にBlobへ変換（fetchを使うとユーザー操作の有効期限が切れて共有シートが開けないため） ---
-function dataUrlToBlob(dataUrl) {
-  const [meta, base64] = dataUrl.split(',');
-  const mimeMatch = meta.match(/:(.*?);/);
-  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
-}
-
-// --- 共有シート経由で保存（iPadは「イメージを保存」をタップするだけで写真に保存できる） ---
-function shareOrDownload(dataUrl, filename) {
+// --- 共有シート経由で保存。true=送信/保存操作が行われた、false=ユーザーがキャンセルした ---
+async function shareOrDownload(blob, filename, mime) {
   try {
-    const blob = dataUrlToBlob(dataUrl);
-    const file = new File([blob], filename, { type: 'image/jpeg' });
+    const file = new File([blob], filename, { type: mime || blob.type || 'application/octet-stream' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file] })
-        .then(() => showToast('保存: ' + filename))
-        .catch(e => {
-          if (e && e.name === 'AbortError') return; // ユーザーが共有シートをキャンセル
-          downloadFile(dataUrl, filename);
-          showToast('保存: ' + filename);
-        });
-      return;
+      try {
+        await navigator.share({ files: [file] });
+        showToast('共有しました: ' + filename);
+        return true;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return false; // ユーザーが共有シートをキャンセル
+      }
     }
   } catch (e) {
     // 共有API非対応の場合は下のフォールバックへ
   }
-  downloadFile(dataUrl, filename);
-  showToast('保存: ' + filename);
+  const url = URL.createObjectURL(blob);
+  downloadFile(url, filename);
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  showToast('保存しました: ' + filename);
+  return true;
 }
 
-// --- 記録用 日付 yymmdd（写真データの参照用途のみ） ---
+// --- 記録用 日付 yymmdd ---
 function getDateStr() {
   const d = new Date();
   const yy = String(d.getFullYear()).slice(2);
@@ -286,19 +505,58 @@ function getDateStr() {
   return yy + mm + dd;
 }
 
+function dateStrToMMDD(dateStr) {
+  return dateStr.slice(2); // yymmdd → mmdd
+}
+
+// yymmdd ⇔ <input type="date">用の YYYY-MM-DD
+function dateStrToISO(dateStr) {
+  return '20' + dateStr.slice(0, 2) + '-' + dateStr.slice(2, 4) + '-' + dateStr.slice(4, 6);
+}
+function isoToDateStr(iso) {
+  const [y, m, d] = iso.split('-');
+  return y.slice(2) + m + d;
+}
+
+// --- ラウンド日付(既定は本日。日付選択で過去日の入力・修正も可能) ---
+let currentDateStr = getDateStr();
+
+function renderDateInput() {
+  document.getElementById('round-date-input').value = dateStrToISO(currentDateStr);
+  document.getElementById('round-date-input').max = dateStrToISO(getDateStr());
+  const hint = document.getElementById('home-hint');
+  if (hint) {
+    hint.innerHTML = currentDateStr === getDateStr()
+      ? '病棟ボタンをタップ → チェック項目の入力 → 撮影<br>(選択中の日付・テーマの入力状況を表示しています)'
+      : '過去日を表示中です(撮影は本日分のみ可能。チェック項目の修正はできます)';
+  }
+}
+
+function onDateChange(iso) {
+  if (!iso) return;
+  currentDateStr = isoToDateStr(iso);
+  renderWards();
+}
+
 // --- ファイル名を生成（1枚目は病棟名のみ、2枚目以降は 病棟-02, 病棟-03... ） ---
 function buildFilename(ward, n) {
   return n <= 1 ? ward : ward + '-' + String(n).padStart(2, '0');
 }
 
-function nextFilename(ward) {
-  const n = (counters[ward] || 0) + 1;
-  counters[ward] = n;
+function counterKey(dateStr, ward) {
+  return dateStr + '|' + ward;
+}
+
+function nextFilename(ward, dateStr) {
+  const key = counterKey(dateStr, ward);
+  const n = (counters[key] || 0) + 1;
+  counters[key] = n;
   return buildFilename(ward, n);
 }
 
-function peekNextFilename(ward) {
-  const n = (counters[ward] || 0) + 1;
+function peekNextFilename(ward, dateStr) {
+  const key = counterKey(dateStr, ward);
+  const n = (counters[key] || 0) + 1;
   return buildFilename(ward, n);
 }
 
@@ -312,16 +570,25 @@ function show(id) {
   updateBadge();
 }
 
+function renderThemeSelect() {
+  const sel = document.getElementById('theme-select');
+  sel.innerHTML = THEMES.map(t => `<option value="${t.name}"${t.name === currentTheme ? ' selected' : ''}>${t.name}</option>`).join('');
+}
+
+function onThemeChange(name) {
+  currentTheme = name;
+  localStorage.setItem('currentTheme', currentTheme);
+  renderWards();
+}
+
 function updateBadge() {
   document.getElementById('count-badge').textContent = photos.length;
 }
 
-// --- 病棟ホーム ---
-function getWardPhotoCount(ward) {
-  return photos.filter(p => p.ward === ward).length;
-}
-
+// --- 病棟ホーム（選択中の日付の枚数を表示） ---
 function renderWards() {
+  renderThemeSelect();
+  renderDateInput();
   const grid = document.getElementById('ward-grid');
   grid.innerHTML = '';
   if (wards.length === 0) {
@@ -329,73 +596,144 @@ function renderWards() {
     return;
   }
   wards.forEach(w => {
-    const cnt = getWardPhotoCount(w);
-    const cell = document.createElement('div');
-    cell.className = 'ward-cell';
+    const cnt = photos.filter(p => p.ward === w && p.dateStr === currentDateStr).length;
+    const rec = checklist[checklistKey(currentDateStr, currentTheme, w)];
+    let chipClass = '', chipText = '未実施';
+    if (rec) {
+      if (isChecklistComplete(rec)) { chipClass = 'done'; chipText = '入力済み'; }
+      else { chipClass = 'partial'; chipText = '入力中'; }
+    }
+    if (cnt > 0) chipText += ' ' + cnt + '枚';
     const btn = document.createElement('button');
     btn.className = 'ward-btn';
-    btn.innerHTML = `${w}<span class="count-chip">${cnt > 0 ? cnt + '枚' : '未撮影'}</span>`;
-    btn.onclick = () => openCamera(w);
-    cell.appendChild(btn);
-    if (cnt > 0) {
-      const manage = document.createElement('button');
-      manage.className = 'ward-manage';
-      manage.textContent = '写真を確認・削除';
-      manage.onclick = () => openWardPhotos(w);
-      cell.appendChild(manage);
-    }
-    grid.appendChild(cell);
+    btn.innerHTML = `${w}<span class="count-chip ${chipClass}">${chipText}</span>`;
+    btn.onclick = () => openChecklistScreen(w, currentTheme, currentDateStr, 'home');
+    grid.appendChild(btn);
   });
 }
 
-// --- 病棟別 写真の確認・削除 ---
-let managingWard = '';
-
-function photoSeq(p) {
-  if (p.filename === p.ward + '.jpg') return 1;
-  const m = p.filename.match(/-(\d+)\.jpg$/);
-  return m ? parseInt(m[1], 10) : 0;
+// --- チェック項目入力画面 ---
+function openChecklistScreen(ward, theme, dateStr, returnTarget) {
+  checklistCtx = { dateStr, theme, ward };
+  checklistReturnTarget = returnTarget;
+  getOrCreateChecklist(dateStr, theme, ward);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-checklist').classList.add('active');
+  renderChecklistScreen();
 }
 
-function openWardPhotos(ward) {
-  managingWard = ward;
-  renderWardPhotos();
-  document.getElementById('ward-photos-modal').classList.add('active');
-}
-
-function closeWardPhotos() {
-  document.getElementById('ward-photos-modal').classList.remove('active');
-  renderWards();
-}
-
-function renderWardPhotos() {
-  const list = document.getElementById('ward-photos-list');
-  const items = photos.map((p, i) => ({ p, i })).filter(x => x.p.ward === managingWard);
-  if (items.length === 0) { closeWardPhotos(); return; }
-  document.getElementById('ward-photos-title').textContent = managingWard + ' の写真（' + items.length + '枚）';
-  list.innerHTML = '';
-  items.forEach(({ p, i }) => {
-    const row = document.createElement('div');
-    row.className = 'photo-row';
-    row.innerHTML = `<img src="${p.dataUrl}" alt="${p.filename}"><span>${p.filename}</span><button onclick="deletePhoto(${i})">削除</button>`;
-    list.appendChild(row);
-  });
-}
-
-function deletePhoto(i) {
-  const p = photos[i];
-  if (!confirm(p.filename + ' を削除しますか？\n※すでに端末（ファイル/写真）へ保存した分は、そちらから別途削除してください')) return;
-  const seq = photoSeq(p);
-  photos.splice(i, 1);
-  // 最新の番号を削除した場合は番号を戻し、撮り直しで同じファイル名を使えるようにする
-  if (seq && seq === counters[p.ward]) {
-    const remaining = photos.filter(x => x.ward === p.ward).map(photoSeq);
-    counters[p.ward] = remaining.length ? Math.max(...remaining) : 0;
+function closeChecklistScreen() {
+  if (checklistReturnTarget && checklistReturnTarget.screen === 'review') {
+    openReview(checklistReturnTarget.dateStr);
+  } else {
+    show('s-home');
   }
-  saveAll();
-  updateBadge();
-  renderWardPhotos();
-  showToast(p.filename + ' を削除しました');
+}
+
+function renderChecklistScreen() {
+  const { dateStr, theme, ward } = checklistCtx;
+  const rec = getOrCreateChecklist(dateStr, theme, ward);
+  const mmdd = dateStrToMMDD(dateStr);
+
+  document.getElementById('checklist-title').textContent = `${ward}　${theme}（${mmdd}）`;
+
+  const itemsHtml = rec.items.map((it, i) => `
+    <div class="check-item">
+      <div class="check-item-text">${it.text}</div>
+      <div class="mark-btns">
+        <button class="mark-btn${it.mark === '◯' ? ' sel-maru' : ''}" onclick="setMark(${i},'◯')">◯</button>
+        <button class="mark-btn${it.mark === '×' ? ' sel-batsu' : ''}" onclick="setMark(${i},'×')">×</button>
+        <button class="mark-btn${it.mark === 'ー' ? ' sel-bar' : ''}" onclick="setMark(${i},'ー')">ー</button>
+      </div>
+    </div>`).join('');
+  document.getElementById('checklist-items').innerHTML = itemsHtml;
+
+  renderChecklistPhotoSection();
+}
+
+function renderChecklistPhotoSection() {
+  const { dateStr, ward } = checklistCtx;
+  const isToday = dateStr === getDateStr();
+  const wardPhotos = photos.filter(p => p.ward === ward && p.dateStr === dateStr);
+
+  let thumbsHtml = '';
+  if (wardPhotos.length > 0) {
+    galleryObjectUrlsChecklist.forEach(u => URL.revokeObjectURL(u));
+    galleryObjectUrlsChecklist = [];
+    thumbsHtml = '<div class="mini-thumb-row">' + wardPhotos.map(p => {
+      const url = URL.createObjectURL(p.blob);
+      galleryObjectUrlsChecklist.push(url);
+      return `<div class="mini-thumb"><img src="${url}" alt="${p.filename}" loading="lazy"></div>`;
+    }).join('') + '</div>';
+  }
+
+  let btnHtml = '';
+  if (isToday) {
+    btnHtml = `<button class="take-photo-btn" onclick="openCameraFromChecklist()">📷 写真を撮る（${wardPhotos.length}枚撮影済み）</button>`;
+  } else if (wardPhotos.length === 0) {
+    thumbsHtml = '<p class="hint" style="text-align:left;margin-top:8px">この日の写真はありません</p>';
+  }
+
+  document.getElementById('checklist-photo-section').innerHTML =
+    '<div class="section-header">写真' + (isToday ? '' : '（過去日のため追加撮影不可）') + '</div>' + thumbsHtml + btnHtml;
+}
+let galleryObjectUrlsChecklist = [];
+
+function setMark(itemIndex, mark) {
+  const { dateStr, theme, ward } = checklistCtx;
+  const rec = getOrCreateChecklist(dateStr, theme, ward);
+  rec.items[itemIndex].mark = mark;
+  dbPutChecklist(rec).catch(e => console.error(e));
+  renderChecklistScreen();
+}
+
+function openCameraFromChecklist() {
+  openCamera(checklistCtx.ward);
+}
+
+// --- 確認・修正(病棟一覧)画面 ---
+function openReview(dateStr) {
+  reviewDateStr = dateStr;
+  show('s-review');
+  renderReview(dateStr);
+}
+
+let reviewDateStr = null;
+
+function renderReview(dateStr) {
+  const mmdd = dateStrToMMDD(dateStr);
+  const recs = Object.values(checklist).filter(r => r.dateStr === dateStr);
+  const container = document.getElementById('review-content');
+
+  if (recs.length === 0) {
+    container.innerHTML = `<p class="hint" style="margin-top:24px">環境ラウンド${mmdd}のチェック結果はまだありません</p>`;
+    return;
+  }
+
+  const byTheme = {};
+  recs.forEach(r => { (byTheme[r.theme] = byTheme[r.theme] || []).push(r); });
+
+  let html = '';
+  Object.keys(byTheme).forEach(theme => {
+    html += `<div class="section-header">${theme}</div><div class="list-card">`;
+    byTheme[theme]
+      .sort((a, b) => wards.indexOf(a.ward) - wards.indexOf(b.ward))
+      .forEach(r => {
+        const batsuCount = r.items.filter(it => it.mark === '×').length;
+        const maruCount = r.items.filter(it => it.mark === '◯').length;
+        const barCount = r.items.filter(it => it.mark === 'ー').length;
+        const unsetCount = r.items.filter(it => !it.mark).length;
+        let summary = `◯${maruCount} ×${batsuCount} ー${barCount}`;
+        if (unsetCount > 0) summary += ` (未入力${unsetCount})`;
+        html += `<button class="review-item" onclick="openChecklistScreen('${r.ward}','${theme}','${dateStr}',{screen:'review',dateStr:'${dateStr}'})">
+          <span class="review-ward">${r.ward}</span>
+          <span class="review-summary${batsuCount > 0 ? ' has-batsu' : ''}">${summary}</span>
+          <span class="review-chevron">›</span>
+        </button>`;
+      });
+    html += '</div>';
+  });
+  container.innerHTML = html;
 }
 
 // --- 編集画面 ---
@@ -420,7 +758,7 @@ function addWard() {
   if (!val) { showToast('病棟名を入力してください'); return; }
   if (wards.includes(val)) { showToast('同じ名前の病棟が既にあります'); return; }
   wards.push(val);
-  saveAll();
+  saveWardsAndCounters();
   input.value = '';
   renderWardList();
   showToast(val + ' を追加しました');
@@ -429,7 +767,7 @@ function addWard() {
 function deleteWard(i) {
   const name = wards[i];
   wards.splice(i, 1);
-  saveAll();
+  saveWardsAndCounters();
   renderWardList();
   showToast(name + ' を削除しました');
 }
@@ -466,7 +804,7 @@ async function openCamera(ward) {
 }
 
 function updateFilenamePreview() {
-  document.getElementById('cam-filename-preview').textContent = peekNextFilename(currentWard) + '.jpg';
+  document.getElementById('cam-filename-preview').textContent = peekNextFilename(currentWard, getDateStr()) + '.jpg';
 }
 
 function closeCamera() {
@@ -474,87 +812,142 @@ function closeCamera() {
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
 
-// --- 撮影画像を約500KBに圧縮 ---
+// --- 撮影範囲をプレビュー(画面表示)と一致させてCanvasへ描画 ---
+// 以前はプレビューは object-fit:cover で画面いっぱいに切り抜いて表示する一方、
+// 保存する画像はカメラの生解像度をそのまま使っていたため、
+// 「画面で見た構図」と「実際に保存される画像」の縦横比がずれる不具合があった。
 function drawToCanvas(video, maxDim) {
   const vw = video.videoWidth || 1280;
   const vh = video.videoHeight || 960;
-  let w = vw, h = vh;
-  if (Math.max(w, h) > maxDim) {
-    const scale = maxDim / Math.max(w, h);
-    w = Math.round(w * scale);
-    h = Math.round(h * scale);
+
+  const wrap = document.querySelector('.cam-video-wrap');
+  const dispW = wrap.clientWidth || vw;
+  const dispH = wrap.clientHeight || vh;
+  const dispAspect = dispW / dispH;
+  const nativeAspect = vw / vh;
+
+  let sx, sy, sw, sh;
+  if (nativeAspect > dispAspect) {
+    // 映像の方が横長 → 左右を切り取る(プレビューと同じ範囲にする)
+    sh = vh;
+    sw = vh * dispAspect;
+    sx = (vw - sw) / 2;
+    sy = 0;
+  } else {
+    // 映像の方が縦長 → 上下を切り取る
+    sw = vw;
+    sh = vw / dispAspect;
+    sx = 0;
+    sy = (vh - sh) / 2;
   }
+
+  let outW = sw, outH = sh;
+  if (Math.max(outW, outH) > maxDim) {
+    const scale = maxDim / Math.max(outW, outH);
+    outW = outW * scale;
+    outH = outH * scale;
+  }
+
   const canvas = document.getElementById('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+  canvas.width = Math.round(outW);
+  canvas.height = Math.round(outH);
+  canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 
-function dataUrlBytes(dataUrl) {
-  const base64 = dataUrl.split(',')[1] || '';
-  return Math.round(base64.length * 0.75);
+function canvasToBlob(canvas, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
 }
 
-function compressPhoto(video) {
+// --- 撮影画像を約500KBに圧縮 ---
+async function compressPhoto(video) {
   let maxDim = MAX_DIMENSION;
   const qualities = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.28, 0.2];
   let best = null;
   for (let pass = 0; pass < 3; pass++) {
     const canvas = drawToCanvas(video, maxDim);
     for (const q of qualities) {
-      const dataUrl = canvas.toDataURL('image/jpeg', q);
-      const bytes = dataUrlBytes(dataUrl);
-      if (!best || bytes < dataUrlBytes(best)) best = dataUrl;
-      if (bytes <= TARGET_BYTES) return dataUrl;
+      const blob = await canvasToBlob(canvas, q);
+      if (blob && (!best || blob.size < best.size)) best = blob;
+      if (blob && blob.size <= TARGET_BYTES) return blob;
     }
     maxDim = Math.round(maxDim * 0.75); // まだ大きい場合は解像度を下げて再挑戦
   }
   return best;
 }
 
-function takePhoto() {
+async function takePhoto() {
   const video = document.getElementById('video');
   const shutterBtn = document.getElementById('shutter-btn');
   if (shutterBtn.disabled) return; // 連打防止
   shutterBtn.disabled = true;
 
-  const dataUrl = compressPhoto(video);
   const dateStr = getDateStr();
-  const filenameBase = nextFilename(currentWard);
+  const filenameBase = nextFilename(currentWard, dateStr);
   const filename = filenameBase + '.jpg';
 
-  photos.push({ filename, dataUrl, ward: currentWard, dateStr });
-  saveAll();
-  updateBadge();
+  try {
+    const blob = await compressPhoto(video);
+    if (!blob) throw new Error('圧縮に失敗しました');
 
-  shareOrDownload(dataUrl, filename);
+    const record = { filename, blob, ward: currentWard, dateStr };
+    const id = await dbAdd(record);
+    record.id = id;
+    photos.push(record);
+    saveWardsAndCounters();
+    updateBadge();
 
-  shutterBtn.disabled = false;
-  closeCamera();
-
-  // ホーム画面に戻って枚数を更新
-  show('s-home');
+    closeCamera();
+    if (document.getElementById('s-checklist').classList.contains('active')) {
+      renderChecklistPhotoSection();
+    } else {
+      show('s-home');
+    }
+    showToast('撮影しました: ' + filename);
+  } catch (e) {
+    console.error(e);
+    // 保存に失敗した場合は連番を1つ戻し、再撮影時に同じファイル名を使えるようにする
+    const key = counterKey(dateStr, currentWard);
+    counters[key] = Math.max(0, (counters[key] || 1) - 1);
+    saveWardsAndCounters();
+    showToast('保存に失敗しました。もう一度お試しください');
+  } finally {
+    shutterBtn.disabled = false;
+  }
 }
 
 // --- ギャラリー ---
+let galleryObjectUrls = [];
+function revokeGalleryUrls() {
+  galleryObjectUrls.forEach(u => URL.revokeObjectURL(u));
+  galleryObjectUrls = [];
+}
+
 function renderGallery() {
+  renderExportSection();
+
   const grid = document.getElementById('gallery-grid');
   const empty = document.getElementById('empty-state');
+  const sectionHeader = document.getElementById('gallery-section-header');
+  revokeGalleryUrls();
   grid.innerHTML = '';
   if (photos.length === 0) {
     empty.style.display = 'flex';
     grid.style.display = 'none';
+    sectionHeader.style.display = 'none';
     return;
   }
   empty.style.display = 'none';
   grid.style.display = 'grid';
+  sectionHeader.style.display = 'block';
   [...photos].reverse().forEach((p, ri) => {
     const i = photos.length - 1 - ri;
+    const url = URL.createObjectURL(p.blob);
+    galleryObjectUrls.push(url);
     const card = document.createElement('div');
     card.className = 'photo-card';
     card.innerHTML = `
-      <img src="${p.dataUrl}" alt="${p.filename}" loading="lazy">
+      <img src="${url}" alt="${p.filename}" loading="lazy">
       <div class="photo-meta">
         <span class="photo-name">${p.filename}</span>
         <button class="dl-btn" onclick="downloadPhoto(${i})" aria-label="再ダウンロード">
@@ -567,12 +960,275 @@ function renderGallery() {
 
 function downloadPhoto(i) {
   const p = photos[i];
-  shareOrDownload(p.dataUrl, p.filename);
+  shareOrDownload(p.blob, p.filename, 'image/jpeg');
 }
 
-// --- 削除 ---
+// --- 書き出し(日付ごとにZIPへまとめてAirDrop/保存) ---
+function renderExportSection() {
+  const container = document.getElementById('export-section');
+  const dateSet = new Set(photos.map(p => p.dateStr));
+  Object.values(checklist).forEach(r => dateSet.add(r.dateStr));
+  const dates = [...dateSet].sort().reverse();
+  if (dates.length === 0) { container.innerHTML = ''; return; }
+
+  let html = '<div class="section-header">書き出し(AirDrop用)</div><div class="list-card">';
+  dates.forEach(ds => {
+    const mmdd = dateStrToMMDD(ds);
+    const cnt = photos.filter(p => p.dateStr === ds).length;
+    html += `<div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px;padding:14px 16px">
+      <span>環境ラウンド${mmdd}(${cnt}枚)</span>
+      <div style="display:flex;gap:8px">
+        <button class="add-submit export-btn" style="flex:1;background:#F2F2F7;color:#1C1C1E" onclick="openReview('${ds}')">確認・修正</button>
+        <button class="add-submit export-btn" style="flex:1" onclick="exportDay('${ds}')">まとめて書き出す</button>
+      </div>
+    </div>`;
+  });
+  html += '</div><p class="hint" style="margin-top:8px;text-align:left">「書き出す」を押すとZIPが1つ作成されます(写真フォルダ・チェック結果Excel・PowerPoint)。AirDrop送信後、Mac側でダブルクリックすると「環境ラウンドMMDD」フォルダとして展開されます。</p>';
+  container.innerHTML = html;
+}
+
+// --- Excel(チェック結果)生成 ---
+function sanitizeSheetName(name) {
+  return name.replace(/[:\\\/\?\*\[\]]/g, '').slice(0, 31);
+}
+
+function buildChecklistSheetRows(theme, entries) {
+  const rows = [];
+  rows.push(['テーマ：' + theme]);
+  rows.push(['実施者(敬称略):']);
+  rows.push([]);
+  rows.push(['確認結果（達成度）']);
+  rows.push(['〇：できている【現状が維持されるか継続して確認する】']);
+  rows.push(['×：できていない【早急に改善する必要がある】', '', '', 'ー：今回は実施していない']);
+  rows.push([]);
+  const itemCount = getTheme(theme).items.length;
+  for (let i = 0; i < entries.length; i += 2) {
+    const left = entries[i], right = entries[i + 1];
+    for (let j = 0; j < itemCount; j++) {
+      const row = ['', '', '', '', '', ''];
+      row[0] = j === 0 ? left.ward : '';
+      row[1] = left.items[j].mark;
+      row[2] = left.items[j].text;
+      if (right) {
+        row[3] = j === 0 ? right.ward : '';
+        row[4] = right.items[j].mark;
+        row[5] = right.items[j].text;
+      }
+      rows.push(row);
+    }
+    rows.push([]);
+  }
+  return rows;
+}
+
+function buildXlsxBlob(dateStr, groupedByTheme) {
+  const mmdd = dateStrToMMDD(dateStr);
+  const wb = XLSX.utils.book_new();
+  Object.keys(groupedByTheme).forEach(theme => {
+    const rows = buildChecklistSheetRows(theme, groupedByTheme[theme]);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 8 }, { wch: 4 }, { wch: 38 }, { wch: 8 }, { wch: 4 }, { wch: 38 }];
+    XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(mmdd + '(' + theme + ')'));
+  });
+  const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Blob([out], { type: 'application/octet-stream' });
+}
+
+// --- PowerPoint(チェック結果+写真)生成 ---
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function getImageSize(blob) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { resolve({ w: img.naturalWidth || 4, h: img.naturalHeight || 3 }); URL.revokeObjectURL(url); };
+    img.onerror = () => { resolve({ w: 4, h: 3 }); URL.revokeObjectURL(url); };
+    img.src = url;
+  });
+}
+
+// 変形させず(縦横比を保ったまま)枠の中に収める配置を計算
+function containRect(box, imgW, imgH) {
+  const boxAr = box.w / box.h;
+  const imgAr = imgW / imgH;
+  let w, h;
+  if (imgAr > boxAr) { w = box.w; h = box.w / imgAr; }
+  else { h = box.h; w = box.h * imgAr; }
+  return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w, h };
+}
+
+// 右側写真エリアの枠割り(1枚=全面、2枚=上下、3枚=上+下2分割)。既存マクロのレイアウトを踏襲
+function photoBoxesFor(count) {
+  const RIGHT = { x: 5.5, y: 0.35, w: 7.5, h: 6.8 };
+  if (count <= 1) return [{ x: RIGHT.x, y: RIGHT.y, w: RIGHT.w, h: RIGHT.h }];
+  const gap = 0.15;
+  const topH = RIGHT.h * 0.49;
+  const bottomY = RIGHT.y + topH + gap;
+  const bottomH = RIGHT.h - topH - gap;
+  if (count === 2) {
+    return [
+      { x: RIGHT.x, y: RIGHT.y, w: RIGHT.w, h: topH },
+      { x: RIGHT.x, y: bottomY, w: RIGHT.w, h: bottomH }
+    ];
+  }
+  const halfW = (RIGHT.w - gap) / 2;
+  return [
+    { x: RIGHT.x, y: RIGHT.y, w: RIGHT.w, h: topH },
+    { x: RIGHT.x, y: bottomY, w: halfW, h: bottomH },
+    { x: RIGHT.x + halfW + gap, y: bottomY, w: halfW, h: bottomH }
+  ];
+}
+
+const MARK_COLOR = { '◯': '1565C0', '×': 'C62828', 'ー': '9E9E9E' };
+
+// --- 表紙スライド(環境ラウンド元データ.pptxの1枚目のレイアウトを踏襲) ---
+function formatDateJa(dateStr) {
+  const mmdd = dateStrToMMDD(dateStr);
+  return '20' + dateStr.slice(0, 2) + '年' + Number(mmdd.slice(0, 2)) + '月' + Number(mmdd.slice(2, 4)) + '日';
+}
+
+function addCoverSlide(pres, theme, dateStr) {
+  const slide = pres.addSlide();
+  slide.addText('環境ラウンド', {
+    x: 0.5, y: 2.3, w: 12.33, h: 1.6, align: 'center', valign: 'middle',
+    fontSize: 40, bold: true, color: '1C1C1E', fontFace: 'メイリオ'
+  });
+  slide.addText(theme, {
+    x: 0.5, y: 3.9, w: 12.33, h: 0.9, align: 'center', valign: 'middle',
+    fontSize: 26, bold: true, color: '007AFF', fontFace: 'メイリオ'
+  });
+  slide.addText(formatDateJa(dateStr), {
+    x: 0.5, y: 4.75, w: 12.33, h: 0.7, align: 'center', valign: 'middle',
+    fontSize: 20, color: '3C3C43', fontFace: 'メイリオ'
+  });
+}
+
+async function buildPptxBlobForTheme(theme, dateStr, entries) {
+  const pres = new PptxGenJS();
+  pres.layout = 'LAYOUT_WIDE';
+  addCoverSlide(pres, theme, dateStr);
+
+  for (const entry of entries) {
+    const slide = pres.addSlide();
+
+    slide.addShape('rect', { x: 0.3, y: 0.3, w: 4.6, h: 0.7, fill: { color: '007AFF' }, line: { type: 'none' } });
+    slide.addText(entry.ward, { x: 0.3, y: 0.3, w: 4.6, h: 0.7, align: 'center', valign: 'middle', color: 'FFFFFF', bold: true, fontSize: 24, fontFace: 'メイリオ' });
+
+    const rowH = 0.55;
+    let y = 1.15;
+    let batsuCount = 0, allBar = true;
+    entry.items.forEach(it => {
+      if (it.mark === '×') batsuCount++;
+      if (it.mark !== 'ー') allBar = false;
+      const fillColor = MARK_COLOR[it.mark] || '9E9E9E';
+      slide.addShape('roundRect', { x: 0.3, y, w: 0.55, h: 0.42, fill: { color: fillColor }, line: { type: 'none' }, rectRadius: 0.06 });
+      slide.addText(it.mark || '-', { x: 0.3, y, w: 0.55, h: 0.42, align: 'center', valign: 'middle', margin: 0, color: 'FFFFFF', bold: true, fontSize: 16 });
+      slide.addText(it.text, { x: 1.0, y, w: 3.9, h: rowH - 0.03, valign: 'middle', color: '000000', bold: true, fontSize: 11, fontFace: 'メイリオ', wrap: true });
+      y += rowH;
+    });
+
+    const wardPhotos = entry.photos.slice(0, 3);
+    const boxes = photoBoxesFor(wardPhotos.length);
+    for (let i = 0; i < wardPhotos.length; i++) {
+      const box = boxes[i];
+      slide.addShape('rect', { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: 'F2F2F2' }, line: { color: 'E5E5EA', width: 1 } });
+      const [dataUrl, size] = await Promise.all([blobToDataURL(wardPhotos[i].blob), getImageSize(wardPhotos[i].blob)]);
+      const r = containRect(box, size.w, size.h);
+      slide.addImage({ data: dataUrl, x: r.x, y: r.y, w: r.w, h: r.h });
+    }
+    if (wardPhotos.length === 0) {
+      const box = boxes[0];
+      slide.addShape('rect', { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: 'F2F2F2' }, line: { color: 'E5E5EA', width: 1 } });
+      slide.addText('写真なし', { x: box.x, y: box.y, w: box.w, h: box.h, align: 'center', valign: 'middle', color: 'C7C7CC', fontSize: 14 });
+    }
+
+    // ×が0件、かつ全項目が「ー」ではない(=実施して評価済み)場合のみExcellentバッジ
+    if (batsuCount === 0 && !allBar) {
+      slide.addShape('ellipseRibbon2', { x: 9.6, y: 0.15, w: 3.2, h: 0.62, fill: { color: 'FF99FF' }, line: { color: 'FFFF00', width: 1 } });
+      slide.addText('Excellent!', { x: 9.6, y: 0.15, w: 3.2, h: 0.62, align: 'center', valign: 'middle', color: 'FFFFFF', bold: true, fontSize: 20 });
+    }
+  }
+
+  return await pres.write('blob');
+}
+
+function getChecklistEntriesForDate(dateStr) {
+  const byTheme = {};
+  Object.values(checklist)
+    .filter(r => r.dateStr === dateStr)
+    .sort((a, b) => wards.indexOf(a.ward) - wards.indexOf(b.ward))
+    .forEach(r => {
+      const entry = { ward: r.ward, items: r.items, photos: photos.filter(p => p.ward === r.ward && p.dateStr === dateStr) };
+      (byTheme[r.theme] = byTheme[r.theme] || []).push(entry);
+    });
+  return byTheme;
+}
+
+async function exportDay(dateStr) {
+  const dayPhotos = photos.filter(p => p.dateStr === dateStr);
+  const byTheme = getChecklistEntriesForDate(dateStr);
+  const hasChecklist = Object.keys(byTheme).length > 0;
+  if (dayPhotos.length === 0 && !hasChecklist) { showToast('対象のデータがありません'); return; }
+  if (typeof JSZip === 'undefined' || typeof XLSX === 'undefined' || typeof PptxGenJS === 'undefined') {
+    showToast('書き出し機能の読み込みに失敗しました。オンライン状態で再度お試しください');
+    return;
+  }
+
+  const mmdd = dateStrToMMDD(dateStr);
+  const zipFilename = '環境ラウンド' + mmdd + '.zip';
+  showToast('書き出し中…');
+
+  try {
+    const zip = new JSZip();
+    const folder = zip.folder('環境ラウンド' + mmdd);
+    dayPhotos.forEach(p => folder.file(p.filename, p.blob));
+
+    if (hasChecklist) {
+      const xlsxBlob = buildXlsxBlob(dateStr, byTheme);
+      zip.file('環境ラウンド' + mmdd + '.xlsx', xlsxBlob);
+
+      for (const theme of Object.keys(byTheme)) {
+        const pptxBlob = await buildPptxBlobForTheme(theme, dateStr, byTheme[theme]);
+        zip.file('環境ラウンド' + mmdd + '(' + theme + ').pptx', pptxBlob);
+      }
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+    const actioned = await shareOrDownload(zipBlob, zipFilename, 'application/zip');
+    if (actioned) {
+      openExportDoneModal(zipFilename, dateStr);
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('書き出しに失敗しました');
+  }
+}
+
+async function deleteDay(dateStr) {
+  const targets = photos.filter(p => p.dateStr === dateStr);
+  for (const p of targets) {
+    await dbDelete(p.id);
+  }
+  photos = photos.filter(p => p.dateStr !== dateStr);
+  await dbDeleteChecklistByDate(dateStr);
+  Object.keys(checklist).forEach(k => { if (checklist[k].dateStr === dateStr) delete checklist[k]; });
+  updateBadge();
+  renderGallery();
+  renderWards();
+  showToast('この日の写真・チェック結果を削除しました');
+}
+
+// --- 削除確認モーダル(全削除) ---
 function confirmClearAll() {
-  if (photos.length === 0) { showToast('写真がありません'); return; }
+  if (photos.length === 0 && Object.keys(checklist).length === 0) { showToast('データがありません'); return; }
   document.getElementById('clear-modal').classList.add('active');
 }
 
@@ -580,15 +1236,39 @@ function closeClearModal() {
   document.getElementById('clear-modal').classList.remove('active');
 }
 
-function clearAll() {
+async function clearAll() {
+  await dbClear();
+  await dbClearChecklist();
   photos = [];
+  checklist = {};
   counters = {};
-  saveAll();
+  saveWardsAndCounters();
   closeClearModal();
   renderGallery();
   updateBadge();
+  renderWards();
   showToast('全て削除しました');
 }
+
+// --- 書き出し完了モーダル ---
+let exportDoneDateStr = null;
+function openExportDoneModal(zipFilename, dateStr) {
+  document.getElementById('export-done-desc').textContent =
+    zipFilename + ' を書き出しました。AirDropや保存が完了していれば、この端末の写真データを削除できます。';
+  exportDoneDateStr = dateStr;
+  document.getElementById('export-done-modal').classList.add('active');
+}
+
+function closeExportDoneModal() {
+  document.getElementById('export-done-modal').classList.remove('active');
+  exportDoneDateStr = null;
+}
+
+document.getElementById('export-done-delete-btn').addEventListener('click', () => {
+  const ds = exportDoneDateStr;
+  closeExportDoneModal();
+  if (ds) deleteDay(ds);
+});
 
 // --- トースト ---
 let toastTimer = null;
@@ -601,9 +1281,32 @@ function showToast(msg) {
 }
 
 // --- 初期化 ---
-saveAll();
-renderWards();
-updateBadge();
+async function init() {
+  try {
+    photos = await dbGetAll();
+  } catch (e) {
+    console.error(e);
+    photos = [];
+  }
+  try {
+    const records = await dbGetAllChecklist();
+    checklist = {};
+    records.forEach(r => { checklist[r.key] = r; });
+  } catch (e) {
+    console.error(e);
+    checklist = {};
+  }
+  saveWardsAndCounters();
+  renderWards();
+  updateBadge();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+}
+init();
 </script>
 </body>
 </html>
